@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "@fortawesome/fontawesome-free/css/all.min.css";
+
+/* --- Modern Social Tile Styles --- */
+.modern-social li {
+  position: relative;
+  list-style: none;
+  width: 60px;
+  height: 60px;
+  background: white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border-radius: 60px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: 0.5s;
+}
+
+.modern-social li::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 60px;
+  background: linear-gradient(45deg, var(--i), var(--j));
+  opacity: 0;
+  transition: 0.5s;
+}
+
+.modern-social li::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  width: 100%;
+  height: 100%;
+  border-radius: 60px;
+  background: linear-gradient(45deg, var(--i), var(--j));
+  filter: blur(15px);
+  opacity: 0;
+  transition: 0.5s;
+  z-index: -1;
+}
+
+.modern-social li:hover {
+  width: 180px;
+  box-shadow: none;
+}
+
+.modern-social li:hover::before {
+  opacity: 1;
+}
+
+.modern-social li:hover::after {
+  opacity: 0.5;
+}
+
+.modern-social li .icon svg {
+  color: #777;
+  font-size: 1.75rem;
+  transition: 0.5s;
+}
+
+.modern-social li:hover .icon svg {
+  transform: scale(0);
+  color: #fff;
+}
+
+.modern-social li .title {
+  position: absolute;
+  color: #fff;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  transform: scale(0);
+  transition: 0.5s;
+}
+
+.modern-social li:hover .title {
+  transform: scale(1);
+}
