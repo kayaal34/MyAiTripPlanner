@@ -3,10 +3,10 @@ export type TravelMode = "walk" | "drive";
 export interface Place {
     id: string;
     name: string;
-    description: string;
-    interest: string;
     lat: number;
-    lon: number;
+    lng: number;  // lon değil lng olmalı
+    address?: string;
+    description?: string;
 }
 
 export interface RouteInfo {

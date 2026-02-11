@@ -3,24 +3,19 @@ import { APIProvider, Map, Marker } from "@vis.gl/react-google-maps";
 import { useTripStore } from "../store/useTripStore";
 
 export default function MapView() {
-    // Zustand store'dan places al
     const places = useTripStore((state) => state.places);
-    // const route = useTripStore((state) => state.route);
 
-    // Harita merkezi
     const center = useMemo(() => {
-        if (!places.length) return { lat: 41.0151, lng: 28.9795 }; // İstanbul varsayılan
+        if (!places.length) return { lat: 41.0151, lng: 28.9795 };
 
         const lat = places.reduce((sum, place) => sum + place.lat, 0) / places.length;
-        const lon = places.reduce((sum, place) => sum + place.lon, 0) / places.length;
+        const lng = places.reduce((sum, place) => sum + place.lng, 0) / places.length;
 
-        return { lat, lng: lon };
+        return { lat, lng };
     }, [places]);
 
-    // API key .env’den çekiliyor
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
-    // Eğer API key yoksa uyarı göster
     if (!apiKey) {
         return (
             <div className="flex h-[520px] w-full items-center justify-center rounded-3xl bg-slate-100">
@@ -35,20 +30,23 @@ export default function MapView() {
         );
     }
 
-    // GERÇEK HARİTA
     return (
         <APIProvider apiKey={apiKey}>
             <Map
-                center={center}
+                defaultCenter={center}
                 defaultZoom={13}
                 mapId="ai-tripper-map"
                 className="h-[520px] w-full rounded-3xl"
                 gestureHandling="greedy"
+                disableDefaultUI={false}
+                zoomControl={true}
+                streetViewControl={false}
+                fullscreenControl={false}
             >
-                {places.map((place) => (
+                {places.map((place, index) => (
                     <Marker
-                        key={place.id}
-                        position={{ lat: place.lat, lng: place.lon }}
+                        key={place.id || index}
+                        position={{ lat: place.lat, lng: place.lng }}
                         title={place.name}
                     />
                 ))}
