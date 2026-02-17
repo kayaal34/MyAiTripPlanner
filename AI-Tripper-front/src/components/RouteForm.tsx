@@ -35,7 +35,7 @@ export default function RouteForm() {
             city,
             interests: interests.length > 0 ? interests : ["Общий"],
             stops: Number(days),
-            mode: transport === "Самолет" ? "plane" : transport === "Автомобиль" ? "driving" : "walk",
+            mode: transport === "Автомобиль" ? "drive" : "walk",
         });
     };
 
