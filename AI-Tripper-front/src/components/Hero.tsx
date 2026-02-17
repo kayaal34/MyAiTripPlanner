@@ -46,7 +46,7 @@ export default function Hero() {
                 className="fixed top-0 left-0 w-full flex items-center justify-center z-50 shadow-sm transition-all"
             >
                 <h1 className="text-3xl font-extrabold text-gray-800 flex gap-2">
-                    AI Trip Planner <span className="text-4xl">🌴☀️</span>
+                    AI Trip Planner <span className="text-4xl"></span>
                 </h1>
             </motion.div>
 
@@ -72,13 +72,13 @@ export default function Hero() {
                 className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4"
             >
                 <div className="bg-black/40 px-6 py-4 rounded-2xl backdrop-blur-sm">
-    <h1 className="text-6xl md:text-7xl font-extrabold text-white">
-        Plan Your Dream Trip
-    </h1>
-    <p className="text-xl mt-2 text-white">
-        AI-powered smart itinerary generation ✈️🌍
-    </p>
-</div>
+                    <h1 className="text-6xl md:text-7xl font-extrabold text-white">
+                        Plan Your Dream Trip
+                    </h1>
+                    <p className="text-xl mt-2 text-white">
+                        AI-powered smart itinerary generation ✈️🌍
+                    </p>
+                </div>
 
             </motion.div>
 

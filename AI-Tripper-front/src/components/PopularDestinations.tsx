@@ -12,160 +12,122 @@ interface Destination {
 const destinationsData: Destination[] = [
     {
         id: 1,
-        name: "İstanbul'da Kültürün Kalbinde",
-        duration: "1 Gün",
-        category: "Kültür",
+        name: "В сердце культуры Стамбула",
+        duration: "1 День",
+        category: "Культура",
         searchQuery: "istanbul hagia sophia sunset",
+        image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800&h=600&fit=crop"
     },
     {
         id: 2,
-        name: "İstanbul'da Adrenalin Dolu Bir Gün",
-        duration: "1 Hafta",
-        category: "Macera",
+        name: "День, полный адреналина в Стамбуле",
+        duration: "1 Неделя",
+        category: "Приключения",
         searchQuery: "istanbul bosphorus adventure",
+        image: "https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=800&h=600&fit=crop"
     },
     {
         id: 3,
-        name: "Rusya'nın Kalbinde Eğlence",
-        duration: "5 Gün",
-        category: "Eğlence",
+        name: "Развлечения в сердце России",
+        duration: "5 Дней",
+        category: "Развлечения",
         searchQuery: "moscow red square winter",
+        image: "https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800&h=600&fit=crop"
     },
     {
         id: 4,
-        name: "Dubai'de Ailece Adrenalin",
-        duration: "5 Gün",
-        category: "Macera",
+        name: "Семейные приключения в Дубае",
+        duration: "5 Дней",
+        category: "Приключения",
         searchQuery: "dubai burj khalifa fountain",
+        image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=600&fit=crop"
     },
     {
         id: 5,
-        name: "Belgrad'ın Kalbinde Kültür",
-        duration: "1 Hafta",
-        category: "Kültür",
+        name: "Культура в сердце Белграда",
+        duration: "1 Неделя",
+        category: "Культура",
         searchQuery: "belgrade kalemegdan sunset",
+        image: "https://images.unsplash.com/photo-1590163778416-7e06c1a4b8c3?w=800&h=600&fit=crop"
     },
     {
         id: 6,
-        name: "Akdeniz'in İncisi Mersin",
-        duration: "3 Gün",
-        category: "Romantik",
+        name: "Жемчужина Средиземноморья Мерсин",
+        duration: "3 Дня",
+        category: "Романтика",
         searchQuery: "mediterranean beach sunset turkey",
+        image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=600&fit=crop"
     },
     {
         id: 7,
-        name: "Maitland'da Ailece Kültür",
-        duration: "1 Hafta",
-        category: "Kültür",
+        name: "Семейная культура в Мейтленде",
+        duration: "1 Неделя",
+        category: "Культура",
         searchQuery: "australia architecture historic",
+        image: "https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=800&h=600&fit=crop"
     },
     {
         id: 8,
-        name: "Bodrum'da Romantik Bir Kaçış",
-        duration: "5 Gün",
-        category: "Romantik",
+        name: "Романтический побег в Бодруме",
+        duration: "5 Дней",
+        category: "Романтика",
         searchQuery: "bodrum castle aegean sea",
+        image: "https://images.unsplash.com/photo-1605555274618-039ba1f4f0eb?w=800&h=600&fit=crop"
     },
     {
         id: 9,
-        name: "Prag'ın Gizemli Sokakları",
-        duration: "5 Gün",
-        category: "Kültür",
+        name: "Загадочные улицы Праги",
+        duration: "5 Дней",
+        category: "Культура",
         searchQuery: "prague charles bridge castle",
+        image: "https://images.unsplash.com/photo-1541849546-216549ae216d?w=800&h=600&fit=crop"
     },
     {
         id: 10,
-        name: "Prag'da Erkek Erkeğe Eğlence",
-        duration: "5 Gün",
-        category: "Eğlence",
+        name: "Мужская компания в Праге",
+        duration: "5 Дней",
+        category: "Развлечения",
         searchQuery: "prague old town male square",
+        image: "https://images.unsplash.com/photo-1519677100203-a0e668c92439?w=800&h=600&fit=crop"
     },
     {
         id: 11,
-        name: "Bodrum'da Yalnız Bir Kaçış",
-        duration: "2 Hafta",
-        category: "Eğlence",
+        name: "Одинокий побег в Бодрум",
+        duration: "2 Недели",
+        category: "Развлечения",
         searchQuery: "bodrum beach nightlife zipline",
+        image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&h=600&fit=crop"
     },
     {
         id: 12,
-        name: "Paris'in Büyülü Eğlencesi",
-        duration: "3 Gün",
-        category: "Eğlence",
+        name: "Волшебные развлечения Парижа",
+        duration: "3 Дня",
+        category: "Развлечения",
         searchQuery: "paris disneyland castle",
+        image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=600&fit=crop"
     },
 ];
 
 const categoryColors: Record<string, string> = {
-    Kültür: "bg-orange-500",
-    Macera: "bg-orange-500",
-    Eğlence: "bg-orange-500",
-    Romantik: "bg-orange-500",
+    Культура: "bg-orange-500",
+    Приключения: "bg-orange-500",
+    Развлечения: "bg-orange-500",
+    Романтика: "bg-orange-500",
 };
 
 export default function PopularDestinations() {
-    const [destinations, setDestinations] = useState<Destination[]>(destinationsData);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchImages = async () => {
-            const key = import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
-            
-            if (!key) {
-                console.warn("Unsplash API key not found");
-                setDestinations(destinationsData.map(d => ({
-                    ...d,
-                    image: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&h=600&fit=crop"
-                })));
-                setLoading(false);
-                return;
-            }
-
-            try {
-                const updatedDestinations = await Promise.all(
-                    destinationsData.map(async (dest) => {
-                        try {
-                            const response = await fetch(
-                                `https://api.unsplash.com/photos/random?query=${encodeURIComponent(dest.searchQuery)}&orientation=landscape&client_id=${key}`
-                            );
-                            const data = await response.json();
-                            return {
-                                ...dest,
-                                image: data.urls?.regular || "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&h=600&fit=crop"
-                            };
-                        } catch (error) {
-                            console.error(`Error fetching image for ${dest.name}:`, error);
-                            return {
-                                ...dest,
-                                image: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&h=600&fit=crop"
-                            };
-                        }
-                    })
-                );
-                setDestinations(updatedDestinations);
-            } catch (error) {
-                console.error("Error fetching images:", error);
-                setDestinations(destinationsData.map(d => ({
-                    ...d,
-                    image: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&h=600&fit=crop"
-                })));
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchImages();
-    }, []);
+    const [destinations] = useState<Destination[]>(destinationsData);
+    const [loading] = useState(false);
 
     if (loading) {
         return (
             <section className="w-full max-w-7xl mx-auto px-6 py-16">
                 <div className="mb-12 text-center">
                     <h2 className="text-4xl font-bold text-[#1e3a8a] mb-3">
-                        İlham Veren Rotalar
+                        Вдохновляющие маршруты
                     </h2>
                     <p className="text-lg text-gray-600">
-                        Görseller yükleniyor...
+                        Загрузка изображений...
                     </p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -185,10 +147,10 @@ export default function PopularDestinations() {
             {/* Header */}
             <div className="mb-12 text-center">
                 <h2 className="text-4xl font-bold text-[#1e3a8a] mb-3">
-                    İlham Veren Rotalar
+                    Вдохновляющие маршруты
                 </h2>
                 <p className="text-lg text-gray-600">
-                    Popüler ve özenle hazırlanmış rota planlarına göz atın.
+                    Ознакомьтесь с популярными и тщательно подготовленными планами маршрутов.
                 </p>
             </div>
 
@@ -212,9 +174,8 @@ export default function PopularDestinations() {
                         {/* Category Badge */}
                         <div className="absolute top-3 left-3">
                             <span
-                                className={`${
-                                    categoryColors[destination.category]
-                                } text-white text-xs font-bold px-3 py-1 rounded-full`}
+                                className={`${categoryColors[destination.category]
+                                    } text-white text-xs font-bold px-3 py-1 rounded-full`}
                             >
                                 {destination.category}
                             </span>
@@ -243,10 +204,10 @@ export default function PopularDestinations() {
                             </div>
                         </div>
 
-                        {/* "Detayları Gör" Button on Hover */}
+                        {/* "Детали" Button on Hover */}
                         <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                             <button className="text-white text-sm font-medium flex items-center gap-1 hover:underline">
-                                Detayları Gör →
+                                Подробнее →
                             </button>
                         </div>
                     </div>
