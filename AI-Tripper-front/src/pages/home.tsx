@@ -6,9 +6,11 @@ import SocialTiles from "../components/SocialTiles";
 import Hero from "../components/Hero";
 import FAQ from "../components/FAQ";
 import PopularDestinations from "../components/PopularDestinations";
+import AuthModal from "../components/AuthModal";
 
 export default function Home() {
     const [weather, setWeather] = useState<any[]>([]);
+    const [showAuthModal, setShowAuthModal] = useState(false);
 
     /* ------------------ HAVA DURUMU ------------------ */
     useEffect(() => {
@@ -41,11 +43,11 @@ export default function Home() {
     return (
         <div className="w-full min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 flex flex-col items-center">
 
-            {/* 🔥 SABİT SOSYAL MEDYA BUTONLARI */}
-            <SocialTiles />
-
             {/* 🔥 HERO BÖLÜMÜ */}
-            <Hero />
+            <Hero onAuthClick={() => setShowAuthModal(true)} />
+
+            {/* 🔥 AUTH MODAL */}
+            {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
 
             {/* 🔥 FORM BÖLÜMÜ */}
             <div className="w-full max-w-5xl mt-20 px-6">
@@ -95,6 +97,11 @@ export default function Home() {
             {/* 🔥 FAQ - Sıkça Sorulan Sorular */}
             <div className="w-full max-w-6xl px-8 mt-20 mb-20">
                 <FAQ />
+            </div>
+
+            {/* 🔥 SABİT SOSYAL MEDYA BUTONLARI */}
+            <div className="w-full mb-20">
+                <SocialTiles />
             </div>
         </div>
     );

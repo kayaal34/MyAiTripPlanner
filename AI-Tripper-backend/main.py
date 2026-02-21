@@ -98,3 +98,7 @@ async def get_places_list(city: str = "Istanbul", interests: str = "culture", st
 async def get_places(data: RouteRequest):
     places = await generate_places(data.city, data.interests, data.stops)
     return {"success": True, "places": places}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

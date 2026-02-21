@@ -2,6 +2,7 @@ fastapi
 uvicorn
 python-dotenv
 openai
+requests
 
 # Database
 sqlalchemy
@@ -13,7 +14,7 @@ redis
 hiredis
 
 # Authentication
-bcrypt==4.1.2
+bcrypt==4.2.0
 passlib[bcrypt]
 python-jose[cryptography]
 python-multipart

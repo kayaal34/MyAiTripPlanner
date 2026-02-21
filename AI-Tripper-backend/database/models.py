@@ -14,6 +14,12 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
+    # Profile fields
+    bio = Column(Text, nullable=True)
+    hobbies = Column(JSON, nullable=True)  # ["Photography", "Hiking", "Food"]
+    interests = Column(JSON, nullable=True)  # ["culture", "adventure", "food"]
+    avatar_url = Column(String, nullable=True)
+    
     # Relationships
     routes = relationship("SavedRoute", back_populates="user", cascade="all, delete-orphan")
     favorites = relationship("FavoritePlace", back_populates="user", cascade="all, delete-orphan")

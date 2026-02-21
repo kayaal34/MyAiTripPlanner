@@ -11,6 +11,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
+    hobbies: Optional[List[str]] = None
+    interests: Optional[List[str]] = None
+    avatar_url: Optional[str] = None
+
 class UserLogin(BaseModel):
     username: str
     password: str
@@ -19,6 +26,10 @@ class User(UserBase):
     id: int
     is_active: bool
     created_at: datetime
+    bio: Optional[str] = None
+    hobbies: Optional[List[str]] = None
+    interests: Optional[List[str]] = None
+    avatar_url: Optional[str] = None
     
     class Config:
         from_attributes = True

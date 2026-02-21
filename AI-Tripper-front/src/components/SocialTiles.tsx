@@ -2,7 +2,7 @@ import { IoLogoFacebook, IoLogoTwitter, IoLogoGoogle, IoLogoInstagram } from "re
 
 export default function SocialTiles() {
     return (
-        <ul className="modern-social fixed top-6 right-6 z-[99999] scale-90 flex gap-[20px] pointer-events-auto">
+        <ul className="modern-social z-10 scale-90 flex gap-[20px] pointer-events-auto justify-center">
 
             <li style={{ "--i": "#3b5998", "--j": "#4c70ba" } as React.CSSProperties}>
                 <span className="icon">

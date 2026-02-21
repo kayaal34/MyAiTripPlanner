@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { LogIn, LogOut, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../store/useAuthStore";
 
-export default function Hero() {
+interface HeroProps {
+    onAuthClick: () => void;
+}
+
+export default function Hero({ onAuthClick }: HeroProps) {
     const [bgImage, setBgImage] = useState<string>("");
-
     const [shrink, setShrink] = useState(false);
+    
+    const { isAuthenticated, user, logout } = useAuthStore();
+    const navigate = useNavigate();
 
     // 🔥 Scroll shrink effect
     useEffect(() => {
@@ -43,11 +52,41 @@ export default function Hero() {
                     backgroundColor: shrink ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0)",
                     backdropFilter: shrink ? "blur(12px)" : "blur(0px)",
                 }}
-                className="fixed top-0 left-0 w-full flex items-center justify-center z-50 shadow-sm transition-all"
+                className="fixed top-0 left-0 w-full flex items-center justify-between px-8 z-50 shadow-sm transition-all"
             >
                 <h1 className="text-3xl font-extrabold text-gray-800 flex gap-2">
                     AI Trip Planner <span className="text-4xl"></span>
                 </h1>
+
+                {/* Auth Button */}
+                <div className="flex items-center gap-4">
+                    {isAuthenticated && user ? (
+                        <>
+                            <button
+                                onClick={() => navigate("/profile")}
+                                className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-all"
+                            >
+                                <User className="w-4 h-4" />
+                                Профиль
+                            </button>
+                            <button
+                                onClick={logout}
+                                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Выход
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={onAuthClick}
+                            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all"
+                        >
+                            <LogIn className="w-4 h-4" />
+                            Вход
+                        </button>
+                    )}
+                </div>
             </motion.div>
 
             {/* 🔥 Background image */}

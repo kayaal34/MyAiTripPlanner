@@ -69,3 +69,37 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 @router.get("/me", response_model=schemas.User)
 def read_users_me(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
     return current_user
+
+
+@router.put("/me", response_model=schemas.User)
+def update_user_profile(
+    user_update: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    # Update user fields
+    if user_update.full_name is not None:
+        current_user.full_name = user_update.full_name
+    if user_update.bio is not None:
+        current_user.bio = user_update.bio
+    if user_update.hobbies is not None:
+        current_user.hobbies = user_update.hobbies
+    if user_update.interests is not None:
+        current_user.interests = user_update.interests
+    if user_update.avatar_url is not None:
+        current_user.avatar_url = user_update.avatar_url
+    
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user_account(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    # Delete user and all related data (cascade)
+    db.delete(current_user)
+    db.commit()
+    return None

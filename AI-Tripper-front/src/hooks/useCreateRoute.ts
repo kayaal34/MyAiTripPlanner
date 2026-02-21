@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { fetchRoute, type RouteRequest, type RouteResponse, ApiError } from "../services/api";
 import { useTripStore } from "../store/useTripStore";
+import { useAuthStore } from "../store/useAuthStore";
 
 /**
  * React Query hook - Backend'e rota isteği atmak için
@@ -23,10 +24,13 @@ export function useCreateRoute() {
     const setRoute = useTripStore((state) => state.setRoute);
     const setIsLoading = useTripStore((state) => state.setIsLoading);
     const setError = useTripStore((state) => state.setError);
+    
+    // Auth store'dan token al
+    const token = useAuthStore((state) => state.token);
 
     return useMutation<RouteResponse, ApiError, RouteRequest>({
         // Mutation function - API çağrısı
-        mutationFn: fetchRoute,
+        mutationFn: (request) => fetchRoute(request, token || undefined),
 
         // İstek başlamadan önce
         onMutate: () => {
