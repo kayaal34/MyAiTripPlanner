@@ -89,6 +89,18 @@ def update_user_profile(
     if user_update.avatar_url is not None:
         current_user.avatar_url = user_update.avatar_url
     
+    # Update new personal preference fields
+    if user_update.gender is not None:
+        current_user.gender = user_update.gender
+    if user_update.preferred_countries is not None:
+        current_user.preferred_countries = user_update.preferred_countries
+    if user_update.vacation_types is not None:
+        current_user.vacation_types = user_update.vacation_types
+    if user_update.travel_style is not None:
+        current_user.travel_style = user_update.travel_style
+    if user_update.age_range is not None:
+        current_user.age_range = user_update.age_range
+    
     db.commit()
     db.refresh(current_user)
     return current_user

@@ -21,7 +21,7 @@ export default function Profile() {
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [savedRoutes, setSavedRoutes] = useState<SavedRouteResponse[]>([]);
+    const [, setSavedRoutes] = useState<SavedRouteResponse[]>([]);
     const [routeHistory, setRouteHistory] = useState<RouteHistoryResponse[]>([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     
@@ -31,10 +31,19 @@ export default function Profile() {
         bio: user?.bio || "",
         hobbies: user?.hobbies || [],
         interests: user?.interests || [],
+        
+        // New personal preference fields
+        gender: user?.gender || "",
+        preferred_countries: user?.preferred_countries || [],
+        vacation_types: user?.vacation_types || [],
+        travel_style: user?.travel_style || "",
+        age_range: user?.age_range || "",
     });
 
     const [newHobby, setNewHobby] = useState("");
     const [newInterest, setNewInterest] = useState("");
+    const [newCountry, setNewCountry] = useState("");
+    const [newVacationType, setNewVacationType] = useState("");
 
     // Load user routes
     useEffect(() => {
@@ -121,6 +130,40 @@ export default function Profile() {
         setFormData({
             ...formData,
             interests: formData.interests?.filter(i => i !== interest)
+        });
+    };
+
+    const addCountry = () => {
+        if (newCountry.trim() && !formData.preferred_countries?.includes(newCountry.trim())) {
+            setFormData({
+                ...formData,
+                preferred_countries: [...(formData.preferred_countries || []), newCountry.trim()]
+            });
+            setNewCountry("");
+        }
+    };
+
+    const removeCountry = (country: string) => {
+        setFormData({
+            ...formData,
+            preferred_countries: formData.preferred_countries?.filter(c => c !== country)
+        });
+    };
+
+    const addVacationType = () => {
+        if (newVacationType.trim() && !formData.vacation_types?.includes(newVacationType.trim())) {
+            setFormData({
+                ...formData,
+                vacation_types: [...(formData.vacation_types || []), newVacationType.trim()]
+            });
+            setNewVacationType("");
+        }
+    };
+
+    const removeVacationType = (type: string) => {
+        setFormData({
+            ...formData,
+            vacation_types: formData.vacation_types?.filter(t => t !== type)
         });
     };
 
@@ -271,6 +314,143 @@ export default function Profile() {
                                             </button>
                                         </span>
                                     ))}
+                                </div>
+                            </div>
+
+                            {/* Personal Preferences Section */}
+                            <div className="border-t pt-6 mt-6">
+                                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                                    🎯 Kişisel Tercihler (AI için)
+                                </h3>
+                                
+                                {/* Gender */}
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Cinsiyet
+                                    </label>
+                                    <select
+                                        value={formData.gender || ""}
+                                        onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="">Seçiniz</option>
+                                        <option value="erkek">Erkek</option>
+                                        <option value="kadın">Kadın</option>
+                                        <option value="belirtmek_istemiyorum">Belirtmek İstemiyorum</option>
+                                    </select>
+                                </div>
+
+                                {/* Age Range */}
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Yaş Aralığı
+                                    </label>
+                                    <select
+                                        value={formData.age_range || ""}
+                                        onChange={(e) => setFormData({ ...formData, age_range: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="">Seçiniz</option>
+                                        <option value="18-25">18-25</option>
+                                        <option value="26-35">26-35</option>
+                                        <option value="36-45">36-45</option>
+                                        <option value="46+">46+</option>
+                                    </select>
+                                </div>
+
+                                {/* Travel Style */}
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Seyahat Stili
+                                    </label>
+                                    <select
+                                        value={formData.travel_style || ""}
+                                        onChange={(e) => setFormData({ ...formData, travel_style: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="">Seçiniz</option>
+                                        <option value="bütçe">Bütçe Dostu</option>
+                                        <option value="orta">Orta Seviye</option>
+                                        <option value="lüks">Lüks</option>
+                                    </select>
+                                </div>
+
+                                {/* Preferred Countries */}
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Tercih Ettiği Ülkeler
+                                    </label>
+                                    <div className="flex gap-2 mb-2">
+                                        <input
+                                            type="text"
+                                            value={newCountry}
+                                            onChange={(e) => setNewCountry(e.target.value)}
+                                            onKeyPress={(e) => e.key === "Enter" && addCountry()}
+                                            placeholder="Ülke ekle... (ör: İtalya, Japonya)"
+                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                        <button
+                                            onClick={addCountry}
+                                            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {formData.preferred_countries?.map((country, idx) => (
+                                            <span
+                                                key={idx}
+                                                className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm flex items-center gap-2"
+                                            >
+                                                {country}
+                                                <button
+                                                    onClick={() => removeCountry(country)}
+                                                    className="text-orange-900 hover:text-orange-600"
+                                                >
+                                                    ×
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Vacation Types */}
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Tercih Ettiği Tatil Türleri
+                                    </label>
+                                    <div className="flex gap-2 mb-2">
+                                        <input
+                                            type="text"
+                                            value={newVacationType}
+                                            onChange={(e) => setNewVacationType(e.target.value)}
+                                            onKeyPress={(e) => e.key === "Enter" && addVacationType()}
+                                            placeholder="Tatil türü ekle... (ör: deniz, dağ, kültür)"
+                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                        <button
+                                            onClick={addVacationType}
+                                            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {formData.vacation_types?.map((type, idx) => (
+                                            <span
+                                                key={idx}
+                                                className="px-3 py-1 bg-pink-100 text-pink-700 rounded-full text-sm flex items-center gap-2"
+                                            >
+                                                {type}
+                                                <button
+                                                    onClick={() => removeVacationType(type)}
+                                                    className="text-pink-900 hover:text-pink-600"
+                                                >
+                                                    ×
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 

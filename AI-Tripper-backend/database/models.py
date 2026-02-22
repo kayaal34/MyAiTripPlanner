@@ -20,6 +20,13 @@ class User(Base):
     interests = Column(JSON, nullable=True)  # ["culture", "adventure", "food"]
     avatar_url = Column(String, nullable=True)
     
+    # Personal preferences for AI trip planning
+    gender = Column(String, nullable=True)  # "erkek", "kadın", "belirtmek_istemiyorum"
+    preferred_countries = Column(JSON, nullable=True)  # ["İtalya", "Japonya", "İspanya"]
+    vacation_types = Column(JSON, nullable=True)  # ["deniz", "dağ", "şehir_turu", "kültür", "macera"]
+    travel_style = Column(String, nullable=True)  # "lüks", "orta", "bütçe"
+    age_range = Column(String, nullable=True)  # "18-25", "26-35", "36-45", "46+"
+    
     # Relationships
     routes = relationship("SavedRoute", back_populates="user", cascade="all, delete-orphan")
     favorites = relationship("FavoritePlace", back_populates="user", cascade="all, delete-orphan")

@@ -17,6 +17,13 @@ class UserUpdate(BaseModel):
     hobbies: Optional[List[str]] = None
     interests: Optional[List[str]] = None
     avatar_url: Optional[str] = None
+    
+    # Personal preferences for AI trip planning
+    gender: Optional[str] = None
+    preferred_countries: Optional[List[str]] = None
+    vacation_types: Optional[List[str]] = None
+    travel_style: Optional[str] = None
+    age_range: Optional[str] = None
 
 class UserLogin(BaseModel):
     username: str
@@ -30,6 +37,13 @@ class User(UserBase):
     hobbies: Optional[List[str]] = None
     interests: Optional[List[str]] = None
     avatar_url: Optional[str] = None
+    
+    # Personal preferences for AI trip planning
+    gender: Optional[str] = None
+    preferred_countries: Optional[List[str]] = None
+    vacation_types: Optional[List[str]] = None
+    travel_style: Optional[str] = None
+    age_range: Optional[str] = None
     
     class Config:
         from_attributes = True

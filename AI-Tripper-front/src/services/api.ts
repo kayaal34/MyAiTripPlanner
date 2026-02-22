@@ -120,6 +120,13 @@ export type UserResponse = {
     interests?: string[];
     avatar_url?: string;
     created_at: string;
+    
+    // Personal preferences for AI trip planning
+    gender?: string;
+    preferred_countries?: string[];
+    vacation_types?: string[];
+    travel_style?: string;
+    age_range?: string;
 }
 
 /**
@@ -216,6 +223,13 @@ export type UpdateProfileRequest = {
     hobbies?: string[];
     interests?: string[];
     avatar_url?: string;
+    
+    // Personal preferences for AI trip planning
+    gender?: string;
+    preferred_countries?: string[];
+    vacation_types?: string[];
+    travel_style?: string;
+    age_range?: string;
 }
 
 /**
@@ -340,4 +354,48 @@ export async function getRouteHistory(token: string): Promise<RouteHistoryRespon
         if (error instanceof ApiError) throw error;
         throw new ApiError("Network error getting history", undefined, error);
     }
+}
+
+/**
+ * Create personalized trip plan based on user preferences
+ */
+export async function createPersonalizedTrip(token: string): Promise<PersonalizedTripResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/personalized-trip`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to create personalized trip", response.status);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error creating trip", undefined, error);
+    }
+}
+
+export type PersonalizedTripResponse = {
+    success: boolean;
+    plan: {
+        destination: string;
+        trip_duration: string;
+        trip_theme: string;
+        recommendations: Array<{
+            day: number;
+            title: string;
+            activities: string[];
+            places: string[];
+            tips: string;
+        }>;
+        personal_notes: string;
+        budget_estimate: string;
+        best_time: string;
+    };
+    message: string;
 }

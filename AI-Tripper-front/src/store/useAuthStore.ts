@@ -12,6 +12,13 @@ interface User {
     avatar_url?: string;
     is_active: boolean;
     created_at: string;
+    
+    // Personal preferences for AI trip planning
+    gender?: string;
+    preferred_countries?: string[];
+    vacation_types?: string[];
+    travel_style?: string;
+    age_range?: string;
 }
 
 interface AuthState {

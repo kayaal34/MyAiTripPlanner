@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from services.llm_service import generate_places
+from services.llm_service import generate_places, generate_personalized_trip_plan
 from database.database import engine, get_db
 from database import models
 from routes import auth, routes, favorites, history
@@ -98,6 +98,47 @@ async def get_places_list(city: str = "Istanbul", interests: str = "culture", st
 async def get_places(data: RouteRequest):
     places = await generate_places(data.city, data.interests, data.stops)
     return {"success": True, "places": places}
+
+@app.post("/api/personalized-trip")
+async def create_personalized_trip(
+    db: Session = Depends(get_db), 
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """Kullanıcının özelliklerine göre kişiselleştirilmiş AI tatil planı"""
+    
+    # Kullanıcı profilini dict'e çevir
+    user_profile = {
+        "full_name": current_user.full_name,
+        "bio": current_user.bio,
+        "hobbies": current_user.hobbies or [],
+        "interests": current_user.interests or [],
+        "gender": current_user.gender,
+        "preferred_countries": current_user.preferred_countries or [],
+        "vacation_types": current_user.vacation_types or [],
+        "travel_style": current_user.travel_style,
+        "age_range": current_user.age_range,
+    }
+    
+    # AI ile kişiselleştirilmiş plan oluştur
+    plan = await generate_personalized_trip_plan(user_profile)
+    
+    # Plan geçmişine kaydet
+    history_entry = models.RouteHistory(
+        user_id=current_user.id,
+        city=plan.get("destination", "Personalized Trip"),
+        interests=current_user.interests or ["kişiselleştirilmiş"],
+        stops=len(plan.get("recommendations", [])),
+        mode="personalized",
+        places=plan  # Tüm plan bilgisini kaydet
+    )
+    db.add(history_entry)
+    db.commit()
+    
+    return {
+        "success": True,
+        "plan": plan,
+        "message": "Kişiselleştirilmiş tatil planınız hazır!"
+    }
 
 if __name__ == "__main__":
     import uvicorn
