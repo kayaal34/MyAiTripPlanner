@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuthStore } from "../store/useAuthStore";
+import Navbar from "../components/Navbar";
 import { 
     updateProfile, 
     deleteAccount, 
@@ -173,20 +174,15 @@ export default function Profile() {
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 py-12 px-6">
-            <div className="max-w-4xl mx-auto">
+            <Navbar />
+            <div className="max-w-4xl mx-auto mt-20">
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-8 flex justify-between items-center"
+                    className="mb-8"
                 >
                     <h1 className="text-4xl font-bold text-gray-800">👤 Мой Профиль</h1>
-                    <button
-                        onClick={() => navigate("/")}
-                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition"
-                    >
-                        ← Главная
-                    </button>
                 </motion.div>
 
                 {error && (
@@ -565,38 +561,33 @@ export default function Profile() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="bg-white rounded-3xl shadow-lg p-8"
+                    className="flex justify-center mt-8"
                 >
-                    <h2 className="text-2xl font-bold text-red-600 mb-4">⚠️ Опасная Зона</h2>
-                    <p className="text-gray-600 mb-4">
-                        Удаление аккаунта необратимо. Все ваши данные, маршруты и избранное будут удалены.
-                    </p>
-                    
                     {!showDeleteConfirm ? (
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
                             className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition"
                         >
-                            Удалить Аккаунт
+                            Hesabı Sil
                         </button>
                     ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-4 text-center">
                             <p className="text-red-600 font-medium">
-                                Вы уверены? Это действие нельзя отменить!
+                                Emin misiniz? Bu işlem geri alınamaz!
                             </p>
-                            <div className="flex gap-4">
+                            <div className="flex gap-4 justify-center">
                                 <button
                                     onClick={handleDeleteAccount}
                                     disabled={loading}
                                     className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition disabled:opacity-50"
                                 >
-                                    {loading ? "Удаление..." : "Да, Удалить"}
+                                    {loading ? "Siliniyor..." : "Evet, Sil"}
                                 </button>
                                 <button
                                     onClick={() => setShowDeleteConfirm(false)}
                                     className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition"
                                 >
-                                    Отмена
+                                    İptal
                                 </button>
                             </div>
                         </div>
