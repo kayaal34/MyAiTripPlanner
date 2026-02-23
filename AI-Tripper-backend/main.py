@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from services.llm_service import generate_places, generate_personalized_trip_plan
+from services.llm_service import generate_places, generate_personalized_trip_plan, generate_detailed_trip_itinerary
 from database.database import engine, get_db
 from database import models
 from routes import auth, routes, favorites, history
@@ -34,6 +34,16 @@ class RouteRequest(BaseModel):
     interests: list[str]
     stops: int
     mode: str = "walk"
+
+
+class TripPlanRequest(BaseModel):
+    city: str
+    days: int
+    travelers: str
+    interests: list[str]
+    transport: str
+    budget: str = "orta"
+    start_date: str = ""
 
 # Debug middleware
 @app.middleware("http")
@@ -94,6 +104,29 @@ async def get_places_list(city: str = "Istanbul", interests: str = "culture", st
     places = await generate_places(city, interest_list, stops)
     return {"success": True, "places": places}
 
+
+@app.get("/api/destinations")
+async def get_popular_destinations():
+    """Popüler şehir ve ülke listesini döndür (autocomplete için)"""
+    try:
+        import json
+        with open("data/popular_destinations.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return {"success": True, "destinations": data["cities"]}
+    except Exception as e:
+        print(f"❌ Şehir listesi yüklenemedi: {e}")
+        # Fallback: Basit liste
+        return {
+            "success": True,
+            "destinations": [
+                {"name": "Paris", "country": "Fransa"},
+                {"name": "İstanbul", "country": "Türkiye"},
+                {"name": "Roma", "country": "İtalya"},
+                {"name": "Barselona", "country": "İspanya"},
+                {"name": "Londra", "country": "İngiltere"}
+            ]
+        }
+
 @app.post("/api/places")
 async def get_places(data: RouteRequest):
     places = await generate_places(data.city, data.interests, data.stops)
@@ -139,6 +172,70 @@ async def create_personalized_trip(
         "plan": plan,
         "message": "Kişiselleştirilmiş tatil planınız hazır!"
     }
+
+
+@app.post("/api/trip-planner")
+async def create_detailed_trip_plan(
+    trip_request: TripPlanRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """
+    Kullanıcının form verilerine göre GÜN GÜN detaylı tatil planı oluşturur.
+    Her gün için sabah, öğle, akşam aktiviteleri, restoranlar ve ipuçları içerir.
+    """
+    
+    print(f"📝 Trip plan talebi alındı: {trip_request.city}, {trip_request.days} gün")
+    
+    try:
+        # Form verilerini dict'e çevir
+        trip_data = {
+            "city": trip_request.city,
+            "days": trip_request.days,
+            "travelers": trip_request.travelers,
+            "interests": trip_request.interests,
+            "transport": trip_request.transport,
+            "budget": trip_request.budget,
+            "start_date": trip_request.start_date
+        }
+        
+        # AI ile detaylı itinerary oluştur
+        itinerary = await generate_detailed_trip_itinerary(trip_data)
+        
+        # Veritabanına kaydet
+        history_entry = models.RouteHistory(
+            user_id=current_user.id,
+            city=trip_request.city,
+            country=itinerary.get("trip_summary", {}).get("destination", ""),
+            duration_days=trip_request.days,
+            travelers=trip_request.travelers,
+            interests=trip_request.interests,
+            budget=trip_request.budget,
+            transport=trip_request.transport,
+            trip_plan=itinerary  # Tüm detaylı planı kaydet
+        )
+        db.add(history_entry)
+        db.commit()
+        db.refresh(history_entry)
+        
+        print(f"✅ {trip_request.days} günlük plan başarıyla oluşturuldu ve kaydedildi")
+        
+        return {
+            "success": True,
+            "itinerary": itinerary,
+            "history_id": history_entry.id,
+            "message": f"{trip_request.city} için {trip_request.days} günlük tatil planınız hazır!"
+        }
+        
+    except Exception as e:
+        print(f"❌ Trip plan oluşturma hatası: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Tatil planı oluşturulurken bir hata oluştu: {str(e)}"
+        )
+
 
 if __name__ == "__main__":
     import uvicorn

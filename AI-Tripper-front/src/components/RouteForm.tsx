@@ -1,22 +1,44 @@
 import { useState } from "react";
-import { useCreateRoute } from "../hooks/useCreateRoute";
-import { createPersonalizedTrip } from "../services/api";
+import { useNavigate } from "react-router-dom";
+import { createDetailedTripPlan } from "../services/api";
 import { useAuthStore } from "../store/useAuthStore";
+import { useTripStore } from "../store/useTripStore";
+
+// Rusça -> İngilizce çeviriler (Backend'e gönderilecek)
+const TRAVELERS_MAP: Record<string, string> = {
+    "Один": "yalniz",
+    "Пара": "cift",
+    "С семьей": "aile",
+    "С друзьями": "arkadaslar"
+};
+
+const TRANSPORT_MAP: Record<string, string> = {
+    "Самолет": "ucak",
+    "Автомобиль": "araba",
+    "Не важно": "farketmez"
+};
+
+const INTERESTS_MAP: Record<string, string> = {
+    "Культура": "kultur",
+    "Развлечения": "eglence",
+    "Вкус": "yemek",
+    "Природа": "doga",
+    "Приключения": "macera",
+    "Романтика": "romantik"
+};
 
 export default function RouteForm() {
+    const navigate = useNavigate();
+    const setCurrentTripPlan = useTripStore((state) => state.setCurrentTripPlan);
     const [city, setCity] = useState("");
     const [days, setDays] = useState("3");
     const [travelers, setTravelers] = useState("");
     const [interests, setInterests] = useState<string[]>([]);
     const [transport, setTransport] = useState("");
-    const [personalizedLoading, setPersonalizedLoading] = useState(false);
-    const [personalizedError, setPersonalizedError] = useState<string | null>(null);
     const [loadingMessage, setLoadingMessage] = useState("");
     const [normalLoading, setNormalLoading] = useState(false);
 
-    const { user, token } = useAuthStore();
-
-    const { mutate: createRoute, isPending: loading, error } = useCreateRoute();
+    const { token } = useAuthStore();
 
     const interestOptions = [
         "Культура",
@@ -35,52 +57,16 @@ export default function RouteForm() {
         );
     };
 
-    const handlePersonalizedTrip = async () => {
-        if (!token) {
-            setPersonalizedError("Kişiselleştirilmiş plan için giriş yapmalısınız");
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (!city || !travelers || !transport || interests.length === 0) {
+            alert("Lütfen tüm alanları doldurun!");
             return;
         }
 
-        setPersonalizedLoading(true);
-        setPersonalizedError(null);
-        
-        // Dinamik yükleme mesajları
-        const messages = [
-            "🔍 Veriler iletiliyor...",
-            "🤖 AI profilinizi analiz ediyor...",
-            "🌍 En uygun rotalar araştırılıyor...",
-            "✨ Kişiselleştirilmiş plan hazırlanıyor...",
-            "🎯 Son detaylar ekleniyor..."
-        ];
-        
-        let messageIndex = 0;
-        setLoadingMessage(messages[0]);
-        
-        const messageInterval = setInterval(() => {
-            messageIndex = (messageIndex + 1) % messages.length;
-            setLoadingMessage(messages[messageIndex]);
-        }, 1500);
-        
-        try {
-            const response = await createPersonalizedTrip(token);
-            clearInterval(messageInterval);
-            // Plan başarıyla oluşturuldu
-            console.log("Personalized trip created:", response.plan);
-            // TODO: Plan sonuçlarını göster (modal veya yeni sayfa)
-            alert(`🎉 Kişiselleştirilmiş tatil planınız hazır!\n\n📍 Destinasyon: ${response.plan.destination}\n⏱️ Süre: ${response.plan.trip_duration}\n🎯 Tema: ${response.plan.trip_theme}`);
-        } catch (error) {
-            clearInterval(messageInterval);
-            setPersonalizedError("Kişiselleştirilmiş plan oluşturulamadı. Lütfen tekrar deneyin.");
-        } finally {
-            setPersonalizedLoading(false);
-            setLoadingMessage("");
-        }
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        if (!city || !travelers || !transport) {
+        if (!token) {
+            alert("Plan oluşturmak için giriş yapmalısınız!");
             return;
         }
 
@@ -89,10 +75,11 @@ export default function RouteForm() {
         // Yükleme mesajları
         const messages = [
             "🔍 Form verileri işleniyor...",
-            `🌍 ${city} için en iyi yerler araştırılıyor...`,
-            "✨ İlgi alanlarınıza göre filtrele...",
-            "🗺️ Rota optimize ediliyor...",
-            "🎯 Son kontroller yapılıyor..."
+            `🌍 ${city} için detaylı plan hazırlanıyor...`,
+            "🤖 AI gün gün aktiviteler araştırıyor...",
+            "🍽️ Restoran önerileri hazırlanıyor...",
+            "🗺️ Her gün için rota oluşturuluyor...",
+            "✨ Son detaylar ekleniyor..."
         ];
         
         let messageIndex = 0;
@@ -101,25 +88,50 @@ export default function RouteForm() {
         const messageInterval = setInterval(() => {
             messageIndex = (messageIndex + 1) % messages.length;
             setLoadingMessage(messages[messageIndex]);
-        }, 1200);
+        }, 2000);
 
-        // Backend'in beklediği formata çevir
-        const stops = parseInt(days) * 5; // Her gün için 5 durak
-        const mode = transport === "Автомобиль" ? "drive" : "walk";
-        
-        createRoute({
-            city,
-            interests,
-            stops,
-            mode,
-        });
+        try {
+            // Backend'e gönderilecek verileri hazırla
+            const travelersValue = TRAVELERS_MAP[travelers] || "yalniz";
+            const transportValue = TRANSPORT_MAP[transport] || "yuruyerek";
+            const interestsValues = interests.map(i => INTERESTS_MAP[i] || i.toLowerCase());
 
-        // Loading temizleme işi React Query'nin başarı/hata callback'lerinde yapılacak
-        setTimeout(() => {
+            console.log("📤 API'ye gönderilen veriler:", {
+                city,
+                days: parseInt(days),
+                travelers: travelersValue,
+                interests: interestsValues,
+                transport: transportValue,
+                budget: "orta"
+            });
+
+            // Yeni API'yi çağır
+            const response = await createDetailedTripPlan({
+                city,
+                days: parseInt(days),
+                travelers: travelersValue,
+                interests: interestsValues,
+                transport: transportValue,
+                budget: "orta"
+            }, token);
+
             clearInterval(messageInterval);
             setNormalLoading(false);
             setLoadingMessage("");
-        }, 6000); // 6 saniye sonra temizle
+
+            console.log("✅ Plan oluşturuldu:", response.itinerary);
+
+            // Store'a kaydet ve sonuç sayfasına yönlendir
+            setCurrentTripPlan(response.itinerary);
+            navigate("/trip-plan");
+
+        } catch (error: any) {
+            clearInterval(messageInterval);
+            setNormalLoading(false);
+            setLoadingMessage("");
+            console.error("❌ Plan oluşturma hatası:", error);
+            alert(`Hata: ${error.message || "Plan oluşturulamadı. Lütfen tekrar deneyin."}`);
+        }
     };
 
     return (
@@ -211,7 +223,7 @@ export default function RouteForm() {
             {/* Ulaşım */}
             <div className="mb-8">
                 <label className="block mb-3 text-sm font-semibold text-gray-700">
-                    Предпочтительный транспорт
+                    Как будете добираться?
                 </label>
                 <div className="flex gap-3">
                     {["Самолет", "Автомобиль", "Не важно"].map((option) => (
@@ -225,82 +237,42 @@ export default function RouteForm() {
                                     : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
                             }`}
                         >
-                            {option}
+                            {option === "Самолет" ? "✈️ Самолет" : option === "Автомобиль" ? "🚗 Автомобиль" : "🤷 Не важно"}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Hata Mesajları */}
-            {error && (
-                <p className="text-red-500 mb-6 text-center font-medium text-lg">
-                    Ошибка: {error.message}
-                </p>
-            )}
-            
-            {personalizedError && (
-                <p className="text-red-500 mb-6 text-center font-medium text-lg">
-                    {personalizedError}
-                </p>
-            )}
-
-            {/* Butonlar */}
-            <div className="space-y-4">
-                {/* Kişiselleştirilmiş AI Tatil Planı */}
-                {user && (
-                    <div>
-                        <button
-                            type="button"
-                            onClick={handlePersonalizedTrip}
-                            disabled={personalizedLoading}
-                            className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-2xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-                        >
-                            {personalizedLoading ? "🤖 AI Çalışıyor..." : "🎯 Özelliklerime Göre Tatil Planla (AI)"}
-                        </button>
-                        
-                        {/* Yükleme Ekranı */}
-                        {personalizedLoading && (
-                            <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-xl border-2 border-purple-200 mb-4 text-center">
-                                <div className="flex items-center justify-center space-x-3 mb-3">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                                    <span className="text-lg font-semibold text-purple-700">{loadingMessage}</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Normal Rota Oluştur */}
-                <div>
-                    <button
-                        type="submit"
-                        disabled={loading || normalLoading}
-                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-2xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {loading || normalLoading ? "🔄 Rota Hazırlanıyor..." : "📍 Manuel Rota Oluştur"}
-                    </button>
-                    
-                    {/* Normal Yükleme Ekranı */}
-                    {(loading || normalLoading) && (
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border-2 border-blue-200 mt-4 text-center">
-                            <div className="flex items-center justify-center space-x-3 mb-3">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                <span className="text-lg font-semibold text-blue-700">{loadingMessage}</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+            {/* Submit Button */}
+            <div>
+                <button
+                    type="submit"
+                    disabled={normalLoading || !token}
+                    className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-2xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {normalLoading ? "🔄 Plan Hazırlanıyor..." : "🗓️ Detaylı Gün Gün Plan Oluştur"}
+                </button>
                 
-                {!user && (
-                    <p className="text-center text-sm text-gray-500 mt-3">
-                        💡 Giriş yapın ve profilinizi doldurun, size özel AI tatil planları oluşturalım!
+                {!token && (
+                    <p className="text-center text-sm text-red-500 mt-2">
+                        ⚠️ Plan oluşturmak için giriş yapmalısınız
                     </p>
+                )}
+                
+                {/* Yükleme Ekranı */}
+                {normalLoading && (
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border-2 border-blue-200 mt-4 text-center">
+                        <div className="flex items-center justify-center space-x-3 mb-3">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <span className="text-lg font-semibold text-blue-700">{loadingMessage}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-3">
+                            ⏱️ Bu işlem 10-20 saniye sürebilir...
+                        </p>
+                    </div>
                 )}
             </div>
         </form>

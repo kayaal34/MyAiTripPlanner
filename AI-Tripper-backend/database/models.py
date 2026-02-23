@@ -14,18 +14,14 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    # Profile fields
+    # Profile fields (opsiyonel, AI personalization için)
     bio = Column(Text, nullable=True)
-    hobbies = Column(JSON, nullable=True)  # ["Photography", "Hiking", "Food"]
-    interests = Column(JSON, nullable=True)  # ["culture", "adventure", "food"]
     avatar_url = Column(String, nullable=True)
     
-    # Personal preferences for AI trip planning
-    gender = Column(String, nullable=True)  # "erkek", "kadın", "belirtmek_istemiyorum"
-    preferred_countries = Column(JSON, nullable=True)  # ["İtalya", "Japonya", "İspanya"]
-    vacation_types = Column(JSON, nullable=True)  # ["deniz", "dağ", "şehir_turu", "kültür", "macera"]
-    travel_style = Column(String, nullable=True)  # "lüks", "orta", "bütçe"
+    # AI için kullanıcı profil tercihleri (sabit, nadiren değişir)
+    gender = Column(String, nullable=True)  # "erkek", "kadin", "diger", None
     age_range = Column(String, nullable=True)  # "18-25", "26-35", "36-45", "46+"
+    travel_style = Column(String, nullable=True)  # "rahat", "aktif", "luks", "butce"
     
     # Relationships
     routes = relationship("SavedRoute", back_populates="user", cascade="all, delete-orphan")
@@ -34,17 +30,19 @@ class User(Base):
 
 
 class SavedRoute(Base):
+    """Kullanıcının beğendiği ve kaydettiği tatil planları"""
     __tablename__ = "saved_routes"
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=False)  # Kullanıcının verdiği isim: "Paris Gezim 2024"
     city = Column(String, nullable=False)
-    interests = Column(JSON, nullable=False)  # ["culture", "food"]
-    places = Column(JSON, nullable=False)  # [{"name": "...", "lat": ..., "lng": ...}]
-    mode = Column(String, default="walk")  # walk, driving, plane
-    distance_km = Column(Float, nullable=True)
-    duration_minutes = Column(Integer, nullable=True)
+    country = Column(String, nullable=True)
+    duration_days = Column(Integer, nullable=False)  # Kaç günlük plan
+    travelers = Column(String, nullable=False)  # "yalniz", "cift", "aile", "arkadaslar"
+    interests = Column(JSON, nullable=False)  # ["kultur", "yemek", "doga"]
+    budget = Column(String, nullable=True)  # "dusuk", "orta", "yuksek"
+    trip_plan = Column(JSON, nullable=False)  # Detaylı gün gün plan (AI'dan gelen)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -72,13 +70,19 @@ class FavoritePlace(Base):
 
 
 class RouteHistory(Base):
+    """Kullanıcının geçmiş arama ve planları (analitik için)"""
     __tablename__ = "route_history"
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     city = Column(String, nullable=False)
-    interests = Column(JSON, nullable=False)
-    stops = Column(Integer, nullable=False)
+    country = Column(String, nullable=True)
+    duration_days = Column(Integer, nullable=False)  # Kaç gün
+    travelers = Column(String, nullable=False)  # Kim ile: "yalniz", "cift", "aile", "arkadaslar"
+    interests = Column(JSON, nullable=False)  # İlgi alanları
+    budget = Column(String, nullable=True)  # "dusuk", "orta", "yuksek"
+    transport = Column(String, nullable=True)  # "yuruyerek", "aracla", "toplu_tasima"
+    trip_plan = Column(JSON, nullable=False)  # AI'dan dönen tüm plan (JSONse)
     mode = Column(String, default="walk")
     places = Column(JSON, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

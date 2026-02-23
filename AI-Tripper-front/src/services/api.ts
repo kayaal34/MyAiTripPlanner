@@ -399,3 +399,140 @@ export type PersonalizedTripResponse = {
     };
     message: string;
 }
+
+// ==================== DETAILED TRIP PLANNER API ====================
+
+export type TripPlanRequest = {
+    city: string;
+    days: number;
+    travelers: string;
+    interests: string[];
+    transport: string;
+    budget?: string;
+    start_date?: string;
+}
+
+export type DailyActivity = {
+    name: string;
+    type: string;
+    address: string;
+    coordinates: { lat: number; lng: number };
+    duration: string;
+    cost: string;
+    description: string;
+    tips?: string;
+}
+
+export type Restaurant = {
+    name: string;
+    address: string;
+    coordinates: { lat: number; lng: number };
+    cuisine: string;
+    average_cost: string;
+    recommended_dishes?: string[];
+    description?: string;
+    atmosphere?: string;
+}
+
+export type DailyItinerary = {
+    day: number;
+    date: string;
+    title: string;
+    morning: {
+        time: string;
+        activities: DailyActivity[];
+    };
+    lunch: {
+        time: string;
+        restaurant: Restaurant;
+    };
+    afternoon: {
+        time: string;
+        activities: DailyActivity[];
+    };
+    evening: {
+        time: string;
+        dinner: Restaurant;
+        night_activities: string[];
+    };
+    daily_tips: {
+        weather: string;
+        clothing: string;
+        important_notes: string;
+        estimated_daily_budget: string;
+    };
+    transportation: {
+        getting_around: string;
+        estimated_transport_cost: string;
+    };
+}
+
+export type AccommodationSuggestion = {
+    name: string;
+    type: string;
+    location: string;
+    price_range: string;
+    why_recommended: string;
+}
+
+export type DetailedTripItinerary = {
+    trip_summary: {
+        destination: string;
+        duration_days: number;
+        travelers: string;
+        total_estimated_cost: string;
+        best_season: string;
+        weather_forecast: string;
+    };
+    daily_itinerary: DailyItinerary[];
+    accommodation_suggestions: AccommodationSuggestion[];
+    general_tips: {
+        local_customs: string;
+        safety: string;
+        money: string;
+        emergency_contacts: string;
+        useful_phrases: string[];
+    };
+    packing_list: string[];
+}
+
+export type DetailedTripResponse = {
+    success: boolean;
+    itinerary: DetailedTripItinerary;
+    history_id: number;
+    message: string;
+}
+
+/**
+ * Detaylı gün gün tatil planı oluştur
+ * Her gün için sabah, öğle, akşam aktiviteleri, restoranlar ve ipuçları içerir
+ */
+export async function createDetailedTripPlan(
+    request: TripPlanRequest,
+    token: string
+): Promise<DetailedTripResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/trip-planner`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(request),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new ApiError(
+                errorData.detail || "Failed to create trip plan",
+                response.status,
+                errorData
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error creating trip plan", undefined, error);
+    }
+}
