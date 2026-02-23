@@ -11,7 +11,7 @@ export default function Home() {
     const [showAuthModal, setShowAuthModal] = useState(false);
 
     return (
-        <div className="w-full min-h-screen bg-gradient-to-b from-purple-50 to-blue-50 flex flex-col items-center">
+        <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col items-center">
             {/* 🔥 HERO BÖLÜMÜ */}
             <Hero onAuthClick={() => setShowAuthModal(true)} />
 
@@ -23,10 +23,10 @@ export default function Home() {
             {/* 🗺️ HARITA VE RASTGELE ÜNLÜ YERLER */}
             <div className="w-full max-w-7xl mx-auto px-6 py-16">
                 <div className="mb-8 text-center">
-                    <h2 className="text-4xl font-bold text-[#1e3a8a] mb-3">
+                    <h2 className="text-5xl font-display font-bold text-gradient mb-4">
                         Откройте для себя известные места
                     </h2>
-                    <p className="text-lg text-gray-600">
+                    <p className="text-lg text-gray-600 font-medium">
                         Нажмите на кнопку, чтобы увидеть случайное туристическое место
                     </p>
                 </div>

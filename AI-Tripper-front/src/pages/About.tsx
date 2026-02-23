@@ -4,7 +4,7 @@ import Navbar from "../components/Navbar";
 
 export default function About() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
             <Navbar />
             {/* Hero Section */}
             <div className="relative h-[60vh] overflow-hidden mt-20">
@@ -20,8 +20,8 @@ export default function About() {
                     className="absolute inset-0 flex items-center justify-center text-center"
                 >
                     <div>
-                        <h1 className="text-6xl font-extrabold text-white mb-4">О Нас</h1>
-                        <p className="text-2xl text-white/90">Мы делаем путешествия доступными для всех</p>
+                        <h1 className="text-6xl font-display font-extrabold text-white mb-4">О Нас</h1>
+                        <p className="text-2xl text-white/90 font-medium">Мы делаем путешествия доступными для всех</p>
                     </div>
                 </motion.div>
             </div>
@@ -36,7 +36,7 @@ export default function About() {
                 >
                     <div className="flex items-center gap-3 mb-6">
                         <Heart className="w-8 h-8 text-red-500" />
-                        <h2 className="text-4xl font-bold text-gray-800">Наша История</h2>
+                        <h2 className="text-4xl font-display font-bold text-gray-800">Наша История</h2>
                     </div>
                     
                     <div className="grid md:grid-cols-2 gap-8 items-center">

@@ -31,7 +31,7 @@ export default function Contact() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-16">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-16">
             <Navbar />
             <div className="max-w-6xl mx-auto px-6 mt-20">
                 {/* Header */}
@@ -40,8 +40,8 @@ export default function Contact() {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center mb-12"
                 >
-                    <h1 className="text-5xl font-extrabold text-gray-800 mb-4">Свяжитесь с Нами</h1>
-                    <p className="text-xl text-gray-600">
+                    <h1 className="text-5xl font-display font-extrabold text-gradient mb-4">Свяжитесь с Нами</h1>
+                    <p className="text-xl text-gray-600 font-medium">
                         Мы всегда рады ответить на ваши вопросы и предложения
                     </p>
                 </motion.div>

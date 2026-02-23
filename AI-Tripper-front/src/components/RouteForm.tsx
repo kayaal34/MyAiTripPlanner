@@ -125,15 +125,15 @@ export default function RouteForm() {
     return (
         <form
             onSubmit={handleSubmit}
-            className="w-full bg-white sm:p-10 p-8 rounded-3xl shadow-2xl border border-gray-100"
+            className="w-full bg-white sm:p-12 p-8 rounded-2xl shadow-xl border border-gray-100"
         >
-            <h2 className="text-4xl font-bold mb-10 text-[#1e3a8a]">
+            <h2 className="text-4xl font-display font-bold mb-10 text-gradient">
                 Создать план отпуска
             </h2>
 
             {/* Hedef */}
             <div className="mb-8">
-                <label className="block mb-3 text-sm font-semibold text-gray-600">
+                <label className="block mb-3 text-sm font-semibold text-gray-700">
                     Направление
                 </label>
                 <input
@@ -141,7 +141,7 @@ export default function RouteForm() {
                     placeholder="Введите название города или страны..."
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    className="w-full border border-gray-300 py-3 px-4 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full border-2 border-gray-200 py-3.5 px-5 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300"
                     required
                 />
             </div>
@@ -149,13 +149,13 @@ export default function RouteForm() {
             {/* Süre ve Kişi (Yan Yana) */}
             <div className="grid grid-cols-2 gap-6 mb-8">
                 <div>
-                    <label className="block mb-3 text-sm font-semibold text-gray-600">
+                    <label className="block mb-3 text-sm font-semibold text-gray-700">
                         Продолжительность поездки
                     </label>
                     <select
                         value={days}
                         onChange={(e) => setDays(e.target.value)}
-                        className="w-full border border-gray-300 py-3 px-4 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full border-2 border-gray-200 py-3.5 px-5 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 cursor-pointer"
                     >
                         {[1, 2, 3, 4, 5, 6, 7].map((d) => (
                             <option key={d} value={d}>
@@ -166,13 +166,13 @@ export default function RouteForm() {
                 </div>
 
                 <div>
-                    <label className="block mb-3 text-sm font-semibold text-gray-600">
+                    <label className="block mb-3 text-sm font-semibold text-gray-700">
                         Кто едет?
                     </label>
                     <select
                         value={travelers}
                         onChange={(e) => setTravelers(e.target.value)}
-                        className="w-full border border-gray-300 py-3 px-4 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        className="w-full border-2 border-gray-200 py-3.5 px-5 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 cursor-pointer"
                     >
                         <option value="" disabled>
                             Выберите...
@@ -187,7 +187,7 @@ export default function RouteForm() {
 
             {/* İlgi Alanları */}
             <div className="mb-8">
-                <label className="block mb-4 text-sm font-semibold text-gray-600">
+                <label className="block mb-4 text-sm font-semibold text-gray-700">
                     Интересы
                 </label>
                 <div className="grid grid-cols-3 gap-4">
@@ -196,10 +196,11 @@ export default function RouteForm() {
                             key={interest}
                             type="button"
                             onClick={() => toggleInterest(interest)}
-                            className={`py-3 px-4 text-base font-medium rounded-xl transition-all ${interests.includes(interest)
-                                ? "bg-blue-50 border-2 border-blue-500 text-blue-700"
-                                : "bg-gray-50 border border-gray-300 text-gray-700 hover:bg-gray-100"
-                                }`}
+                            className={`py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${
+                                interests.includes(interest)
+                                    ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg scale-105"
+                                    : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                            }`}
                         >
                             {interest}
                         </button>
@@ -209,7 +210,7 @@ export default function RouteForm() {
 
             {/* Ulaşım */}
             <div className="mb-8">
-                <label className="block mb-3 text-sm font-semibold text-gray-600">
+                <label className="block mb-3 text-sm font-semibold text-gray-700">
                     Предпочтительный транспорт
                 </label>
                 <div className="flex gap-3">
@@ -218,10 +219,11 @@ export default function RouteForm() {
                             key={option}
                             type="button"
                             onClick={() => setTransport(option)}
-                            className={`flex-1 py-3 px-4 text-base font-medium rounded-xl transition-all ${transport === option
-                                ? "bg-blue-500 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                }`}
+                            className={`flex-1 py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${
+                                transport === option
+                                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-105"
+                                    : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                            }`}
                         >
                             {option}
                         </button>
@@ -251,7 +253,7 @@ export default function RouteForm() {
                             type="button"
                             onClick={handlePersonalizedTrip}
                             disabled={personalizedLoading}
-                            className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                            className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-2xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                         >
                             {personalizedLoading ? "🤖 AI Çalışıyor..." : "🎯 Özelliklerime Göre Tatil Planla (AI)"}
                         </button>
@@ -276,20 +278,20 @@ export default function RouteForm() {
                     <button
                         type="submit"
                         disabled={loading || normalLoading}
-                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-2xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading || normalLoading ? "🔄 Rota Hazırlanıyor..." : "📍 Manuel Rota Oluştur"}
                     </button>
                     
                     {/* Normal Yükleme Ekranı */}
                     {(loading || normalLoading) && (
-                        <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-xl border-2 border-orange-200 mt-4 text-center">
+                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border-2 border-blue-200 mt-4 text-center">
                             <div className="flex items-center justify-center space-x-3 mb-3">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
-                                <span className="text-lg font-semibold text-orange-700">{loadingMessage}</span>
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                <span className="text-lg font-semibold text-blue-700">{loadingMessage}</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+                                <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
                             </div>
                         </div>
                     )}
