@@ -223,9 +223,13 @@ def generate_mock_personalized_plan(user_data: dict):
 
 async def generate_detailed_trip_itinerary(trip_data: dict):
     """
-    Kullanıcının girdiği verilere göre GÜN GÜN detaylı tatil planı oluşturur.
-    Her gün için sabah, öğle, akşam aktiviteleri, restoranlar, ulaşım bilgileri içerir.
-    KIM İLE GİTTİĞİNE GÖRE FARKLI PROMPT kullanır.
+    PRODUCTION-READY: Kullanıcının girdiği verilere göre GÜN GÜN detaylı tatil planı oluşturur.
+    
+    ✅ Async HTTP (httpx.AsyncClient)
+    ✅ JSON zorunlu (response_mime_type: application/json)
+    ✅ Düşük halüsinasyon (temperature: 0.2)
+    ✅ Gerçekçi mekanlar (katı prompt talimatları)
+    ✅ Kişiselleştirme (travelers, budget, interests)
     """
     
     try:
@@ -237,221 +241,220 @@ async def generate_detailed_trip_itinerary(trip_data: dict):
         # Form verilerini çıkar
         city = trip_data.get('city', 'İstanbul')
         days = trip_data.get('days', 3)
-        travelers = trip_data.get('travelers', 'yalniz')  # yalniz, cift, aile, arkadaslar
+        travelers = trip_data.get('travelers', 'yalniz')
         interests = trip_data.get('interests', [])
         transport = trip_data.get('transport', 'yuruyerek')
-        budget = trip_data.get('budget', 'orta')  # dusuk, orta, yuksek
+        budget = trip_data.get('budget', 'orta')
         start_date = trip_data.get('start_date', '')
         
-        # İlgi alanlarını temizle
         interests_text = ", ".join(interests) if interests else "genel turizm"
         
-        # KIM İLE GİTTİĞİNE GÖRE ÖZEL PROMPT EKLEMELERİ
-        traveler_specific_instructions = {
-            "yalniz": """
-            🧳 YALNIZ SEYAHAT ÖZEL TAVSİYELER:
-            - Sosyal ortamlar ve diğer gezginlerle tanışma fırsatları
-            - Solo traveller-friendly kafeler, coworking mekanlar
-            - Güvenli ve rahat tek başına yapılabilecek aktiviteler
-            - Hostel/otel sosyal alanları, tur grupları
-            - Esnek zaman çizelgesi, kendi temponda gezme
-            - Fotoğraf çekimi için selfie-friendly yerler
-            """,
-            "cift": """
-            💑 ÇİFT SEYAHATI ÖZEL TAVSİYELER:
-            - Romantik restoranlar ve manzaralı mekanlar
-            - Gün batımı izlenecek noktalar
-            - Çiftler için aktiviteler (şarap tadımı, spa, yat turu)
-            - İntim ve özel atmosfere sahip yerler
-            - Fotoğraf çekimi için romantik spot'lar
-            - Akşam yürüyüşü rotaları
-            """,
-            "aile": """
-            👨‍👩‍👧‍👦 AİLE SEYAHATI ÖZEL TAVSİYELER:
-            - Çocuk dostu restoranlar ve menüler
-            - Eğlence parkları, hayvanat bahçeleri, aquaparklar
-            - Güvenli ve temiz mekanlar
-            - Çocuklar için eğitici müzeler ve aktiviteler
-            - Oyun alanları, park alanları
-            - Bebek/çocuk arabası erişimine uygun yerler
-            - Aile bütçesine uygun ekonomik seçenekler
-            - Çocukların sıkılmayacağı interaktif aktiviteler
-            """,
-            "arkadaslar": """
-            👥 ARKADAŞ GRUBU SEYAHATI ÖZEL TAVSİYELER:
-            - Gece hayatı, barlar, kulüpler
-            - Grup aktiviteleri (kaçış odası, bowling, paintball)
-            - Macera ve adrenalin dolu etkinlikler
-            - Sosyal ve eğlenceli mekanlar
-            - Grup yemekleri için uygun restoranlar
-            - Fotoğraf çekimi için eğlenceli yerler
-            - Gruplar için indirimli aktiviteler
-            """
+        # Bütçe aralıkları (örnek, para birimi şehre göre değişebilir)
+        budget_ranges = {
+            "dusuk": "ekonomik (günlük 500-1000 TL bütçe)",
+            "orta": "orta seviye (günlük 1000-2500 TL bütçe)",
+            "yuksek": "lüks (günlük 2500+ TL bütçe)"
         }
+        budget_description = budget_ranges.get(budget.lower(), budget_ranges["orta"])
         
-        # Seçilen traveller tipine göre özel talimat
-        traveler_prompt = traveler_specific_instructions.get(travelers.lower(), "")
+        # Seyahat tipine göre özel talimatlar
+        traveler_guides = {
+            "yalniz": "Solo gezginler için: sosyal mekanlar, güvenli rotalar, hostel/kafe önerileri, tek başına yapılabilir aktiviteler",
+            "cift": "Çiftler için: romantik restoranlar, gün batımı noktaları, mahrem atmosfer, çift aktiviteleri (spa, şarap tadımı)",
+            "aile": "Aileler için: çocuk dostu restoranlar, eğitici ve eğlenceli aktiviteler, güvenli alanlar, oyun parkları, ekonomik seçenekler",
+            "arkadaslar": "Arkadaş grupları için: gece hayatı, grup aktiviteleri (escape room, bowling), sosyal mekanlar, macera sporları"
+        }
+        traveler_context = traveler_guides.get(travelers.lower(), traveler_guides["yalniz"])
         
-        # Detaylı prompt oluştur
+        # KATLI VE DETAYLI PROMPT (Halüsinasyon Engeli)
         prompt = f"""
-        {city} şehri için {days} günlük detaylı bir tatil planı oluştur.
-        
-        Tatil Bilgileri:
-        - Şehir: {city}
-        - Süre: {days} gün
-        - Seyahat Eden: {travelers} 
-        - İlgi Alanları: {interests_text}
-        - Ulaşım Tercihi: {transport}
-        - Bütçe: {budget}
-        {f'- Başlangıç Tarihi: {start_date}' if start_date else ''}
-        
-        {traveler_prompt}
-        
-        ÖNEMLİ: Yukarıdaki seyahat tipi özelliklerine göre önerileri özelleştir!
-        
-        Her gün için aşağıdaki detaylı bilgileri içeren bir plan hazırla:
-        
-        1. SABAH AKTİVİTELERİ (09:00-12:00):
-           - Ana ziyaret yerleri (müze, tarihi alan, doğal güzellik vb.)
-           - Tahmini süre ve giriş ücreti
-           - Nasıl gidilir (adres, koordinat)
-        
-        2. ÖĞLE YEMEĞİ (12:00-14:00):
-           - Önerilen restoran/kafe (isim, adres, özellik)
-           - Tahmini maliyet
-           - Önerilen yemekler
-        
-        3. ÖĞLEDENSONRa AKTİVİTELERİ (14:00-18:00):
-           - İkinci ana ziyaret noktaları  
-           - Alışveriş önerileri
-           - Alternatif aktiviteler
-        
-        4. AKŞAM (18:00-22:00):
-           - Akşam yemeği önerileri
-           - Gece hayatı veya rahatlatıcı aktiviteler
-           - Güvenlik ipuçları
-        
-        5. GÜNLÜK İPUÇLARI:
-           - Hava durumu tahmini
-           - Giyim önerisi
-           - Önemli notlar
-           - Tahmini günlük bütçe
-        
-        Aşağıdaki JSON formatını kullan:
-        
-        {{
-          "trip_summary": {{
-            "destination": "{city}",
-            "duration_days": {days},
-            "travelers": "{travelers}",
-            "total_estimated_cost": "Tahmini toplam maliyet (para birimi ile)",
-            "best_season": "En uygun mevsim",
-            "weather_forecast": "Genel hava durumu bilgisi"
-          }},
-          "daily_itinerary": [
-            {{
-              "day": 1,
-              "date": "Tarih bilgisi varsa",
-              "title": "Gün başlığı",
-              "morning": {{
-                "time": "09:00-12:00",
-                "activities": [
-                  {{
-                    "name": "Aktivite/Yer adı",
-                    "type": "museum/historical/nature/shopping",
-                    "address": "Tam adres",
-                    "coordinates": {{"lat": 0.0, "lng": 0.0}},
-                    "duration": "Tahmini süre",
-                    "cost": "Giriş ücreti",
-                    "description": "Kısa açıklama",
-                    "tips": "Özel ipuçları"
-                  }}
-                ]
-              }},
-              "lunch": {{
-                "time": "12:00-14:00",
-                "restaurant": {{
-                  "name": "Restoran adı",
-                  "address": "Adres",
-                  "coordinates": {{"lat": 0.0, "lng": 0.0}},
-                  "cuisine": "Mutfak türü",
-                  "average_cost": "Kişi başı maliyet",
-                  "recommended_dishes": ["Yemek 1", "Yemek 2"],
-                  "description": "Restoran hakkında"
-                }}
-              }},
-              "afternoon": {{
-                "time": "14:00-18:00",
-                "activities": [
-                  {{
-                    "name": "Aktivite adı",
-                    "type": "shopping/walking/cultural",
-                    "address": "Adres",
-                    "coordinates": {{"lat": 0.0, "lng": 0.0}},
-                    "duration": "Süre",
-                    "cost": "Maliyet",
-                    "description": "Açıklama"
-                  }}
-                ]
-              }},
-              "evening": {{
-                "time": "18:00-22:00",
-                "dinner": {{
-                  "name": "Restoran adı",
-                  "address": "Adres",
-                  "coordinates": {{"lat": 0.0, "lng": 0.0}},
-                  "cuisine": "Mutfak türü",
-                  "average_cost": "Maliyet",
-                  "atmosphere": "Atmosfer açıklaması"
-                }},
-                "night_activities": [
-                  "Gece aktivitesi 1",
-                  "Gece aktivitesi 2"
-                ]
-              }},
-              "daily_tips": {{
-                "weather": "Hava durumu",
-                "clothing": "Giyim önerisi",
-                "important_notes": "Önemli notlar",
-                "estimated_daily_budget": "Günlük tahmini bütçe"
-              }},
-              "transportation": {{
-                "getting_around": "Şehir içi ulaşım önerileri",
-                "estimated_transport_cost": "Tahmini ulaşım maliyeti"
-              }}
-            }}
-          ],
-          "accommodation_suggestions": [
-            {{
-              "name": "Otel/Konaklama adı",
-              "type": "hotel/hostel/apartment",
-              "location": "Konum",
-              "price_range": "Fiyat aralığı",
-              "why_recommended": "Neden öneriliyor ({travelers} için uygunluğu)"
-            }}
-          ],
-          "general_tips": {{
-            "local_customs": "Yerel görgü kuralları",
-            "safety": "Güvenlik ipuçları",
-            "money": "Para ve bütçe tavsiyeleri",
-            "emergency_contacts": "Acil durum numaraları",
-            "useful_phrases": "Faydalı kelimeler/cümleler"
-          }},
-          "packing_list": [
-            "Götürülmesi gereken eşya 1",
-            "Götürülmesi gereken eşya 2"
-          ]
+SEN BİR PROFESYONEL SEYAHAT PLANLAMA UZMANISIN. ŞU KURALLARA KESİNLİKLE UY:
+
+════════════════════════════════════════════════════════════
+🚨 KRİTİK TALİMATLAR - MUTLAKA UYGULA:
+════════════════════════════════════════════════════════════
+
+1. SADECE GERÇEK MEKANLAR:
+   ❌ Uydurma yer isimleri YASAK
+   ❌ "Örnek Müze", "Test Restoran" gibi genel isimler YASAK
+   ✅ {city} şehrinde GERÇEKTEN VAR OLAN, AÇIK ve POPÜLER mekanları öner
+   ✅ Müzelerin, restoranların, turistik yerlerin GERÇEK İSİMLERİNİ kullan
+
+2. GERÇEK KOORDİNATLAR:
+   ✅ Her mekan için latitude (lat) ve longitude (lng) bilgilerini {city} şehrinin GERÇEKÇİ koordinatlarına göre belirle
+   ✅ Koordinatlar şehir sınırları içinde olmalı (örnek: İstanbul için 40.9-41.1 lat, 28.8-29.2 lng aralığında)
+
+3. GÜNCEL BİLGİLER:
+   ✅ 2026 yılı itibariyle açık olan mekanlar
+   ❌ Kapanan veya yıkılan yerler önerme
+   ✅ Güncel fiyat tahminleri ver (enflasyon göz önünde)
+
+4. KİŞİSELLEŞTİRME ZORUNLU:
+   ✅ İlgi alanlarına uy: {interests_text}
+   ✅ Seyahat tipine uy: {traveler_context}
+   ✅ Bütçeye uy: {budget_description}
+   ✅ Ulaşım tercihine uy: {transport}
+
+════════════════════════════════════════════════════════════
+📋 SEYAHAT BİLGİLERİ:
+════════════════════════════════════════════════════════════
+- Hedef Şehir: {city}
+- Süre: {days} gün
+- Kimle Gidiliyor: {travelers}
+- İlgi Alanları: {interests_text}
+- Ulaşım Tercihi: {transport}
+- Bütçe Seviyesi: {budget_description}
+{f'- Başlangıç Tarihi: {start_date}' if start_date else ''}
+
+════════════════════════════════════════════════════════════
+🎯 JSON ŞEMASI - BU YAPIYI TAM OLARAK KULLAN:
+════════════════════════════════════════════════════════════
+
+{{
+  "trip_summary": {{
+    "destination": "{city}",
+    "duration_days": {days},
+    "travelers": "{travelers}",
+    "total_estimated_cost": "Toplam tahmini maliyet (örn: 15000-25000 TL)",
+    "budget_breakdown": {{
+      "accommodation": "Konaklama maliyeti",
+      "food": "Yemek maliyeti",
+      "activities": "Aktivite maliyeti",
+      "transport": "Ulaşım maliyeti"
+    }},
+    "best_season": "En uygun mevsim ({city} için)",
+    "weather_forecast": "Genel hava durumu bilgisi"
+  }},
+  "daily_itinerary": [
+  "daily_itinerary": [
+    {{
+      "day": 1,
+      "date": "{start_date if start_date else 'Gün 1'}",
+      "title": "Gün 1 - [Kısa Başlık]",
+      "morning": {{
+        "time": "09:00-12:00",
+        "activities": [
+          {{
+            "name": "[GERÇEK YER İSMİ - örn: Topkapı Sarayı]",
+            "type": "museum/historical/nature/religious",
+            "address": "[TAM GERÇEK ADRES]",
+            "coordinates": {{"lat": [GERÇEK LAT], "lng": [GERÇEK LNG]}},
+            "duration": "[TAHMİNİ SÜRE - örn: 2-3 saat]",
+            "cost": "[GİRİŞ ÜCRETİ - örn: 200 TL]",
+            "description": "[KISA AÇIKLAMA]",
+            "tips": "[ÖZEL İPUÇLARI]",
+            "why_recommended": "[{travelers} için neden uygun]"
+          }}
+        ]
+      }},
+      "lunch": {{
+        "time": "12:00-14:00",
+        "restaurant": {{
+          "name": "[GERÇEK RESTORAN İSMİ]",
+          "address": "[TAM ADRES]",
+          "coordinates": {{"lat": [GERÇEK LAT], "lng": [GERÇEK LNG]}},
+          "cuisine": "[MUTFAK TÜRÜ]",
+          "average_cost": "[KİŞİ BAŞI MALİYET - bütçeye uygun: {budget_description}]",
+          "recommended_dishes": ["[Yemek 1]", "[Yemek 2]"],
+          "description": "[RESTORAN HAKKINDA]",
+          "atmosphere": "[ATMOSFER - {traveler_context}'e uygun]"
         }}
-        
-        ÖNEMLI: Sadece geçerli JSON formatında yanıt ver. Gerçek yerler, restoranlar ve koordinatlar kullan.
-        Tüm bilgiler güncel ve doğru olmalı. İlgi alanlarına göre özelleştir: {interests_text}
-        {travelers} tipine uygun öneriler sun!
+      }},
+      "afternoon": {{
+        "time": "14:00-18:00",
+        "activities": [
+          {{
+            "name": "[GERÇEK AKTİVİTE/YER]",
+            "type": "shopping/walking/cultural/adventure",
+            "address": "[ADRES]",
+            "coordinates": {{"lat": [LAT], "lng": [LNG]}},
+            "duration": "[SÜRE]",
+            "cost": "[MALİYET]",
+            "description": "[AÇIKLAMA]",
+            "suitable_for": "[{travelers} için uygunluk]"
+          }}
+        ]
+      }},
+      "evening": {{
+        "time": "18:00-22:00",
+        "dinner": {{
+          "name": "[GERÇEK RESTORAN]",
+          "address": "[ADRES]",
+          "coordinates": {{"lat": [LAT], "lng": [LNG]}},
+          "cuisine": "[MUTFAK TÜRÜ]",
+          "average_cost": "[MALİYET - {budget} bütçeye uygun]",
+          "atmosphere": "[ATMOSFER]",
+          "reservation_needed": true/false
+        }},
+        "night_activities": [
+          "[Gece aktivitesi 1 - {travelers} tipine uygun]",
+          "[Gece aktivitesi 2]"
+        ]
+      }},
+      "daily_tips": {{
+        "weather": "[Hava durumu tahmini]",
+        "clothing": "[Giyim önerisi]",
+        "important_notes": "[Önemli notlar]",
+        "estimated_daily_budget": "[Günlük bütçe - {budget} seviyesine uygun]"
+      }},
+      "transportation": {{
+        "getting_around": "[{transport} tercihi - detaylı ulaşım bilgisi]",
+        "estimated_transport_cost": "[Günlük ulaşım maliyeti]",
+        "tips": "[Ulaşım ipuçları]"
+      }}
+    }}
+    // ... {days} güne kadar devam et
+  ],
+  "accommodation_suggestions": [
+    {{
+      "name": "[GERÇEK OTEL/HOSTEL İSMİ]",
+      "type": "hotel/hostel/apartment/boutique",
+      "location": "[Semt/Bölge]",
+      "price_range": "[Gecelik fiyat aralığı - {budget} bütçeye uygun]",
+      "why_recommended": "[{travelers} için neden uygun]",
+      "amenities": ["WiFi", "Kahvaltı", "vb."],
+      "booking_tip": "[Rezervasyon ipucu]"
+    }}
+  ],
+  "general_tips": {{
+    "local_customs": "[{city} yerel görgü kuralları]",
+    "safety": "[Güvenlik ipuçları - {travelers} için özel]",
+    "money": "[Para kullanımı, ATM, döviz]",
+    "emergency_contacts": "[Acil durum numaraları]",
+    "useful_phrases": ["[Faydalı kelime 1]", "[Faydalı kelime 2]"],
+    "dos_and_donts": ["[Yapılması gereken]", "[Yapılmaması gereken]"]
+  }},
+  "packing_list": [
+    "[{city} ve {interests_text} için özel eşya 1]",
+    "[{travelers} için özel eşya 2]",
+    "[Mevsime uygun eşya]"
+  ],
+  "budgeting_advice": {{
+    "money_saving_tips": ["[Tasarruf ipucu 1]", "[Tasarruf ipucu 2]"],
+    "splurge_worthy": ["[Değer önerisi 1]"],
+    "free_activities": ["[Ücretsiz aktivite 1]", "[Ücretsiz aktivite 2]"]
+  }}
+}}
+
+════════════════════════════════════════════════════════════
+⚠️ SON UYARI:
+════════════════════════════════════════════════════════════
+- UYDURMA YER İSİMLERİ KULLANMA
+- KOORDİNATLARI RASTGELE YAZMA
+- HER ÖNERİ {city} ŞEHRİNDE GERÇEKTEN VAR OLMALI
+- {interests_text} İLGİ ALANLARINI DİKKATE AL
+- {travelers} TİPİNE UYGUN ÖNERİLER VER
+- {budget_description} BÜTÇEYE UYGUN FİYATLAR BELİRT
+
+Şimdi yukarıdaki JSON formatında {days} günlük detaylı plan oluştur.
+Sadece geçerli JSON döndür, başka açıklama ekleme.
         """
         
-        # Gemini API'sine istek gönder
+        # Gemini API'sine asenkron istek gönder
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
         
         headers = {"Content-Type": "application/json"}
+        
         data = {
             "contents": [{
                 "parts": [{
@@ -459,36 +462,60 @@ async def generate_detailed_trip_itinerary(trip_data: dict):
                 }]
             }],
             "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 8000,  # Detaylı plan için daha fazla token
-                "response_mime_type": "application/json"
-            }
+                "temperature": 0.2,  # Düşük halüsinasyon için
+                "topP": 0.8,
+                "topK": 40,
+                "maxOutputTokens": 8192,  # Detaylı plan için yüksek limit
+                "response_mime_type": "application/json"  # JSON zorunlu
+            },
+            "safetySettings": [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+            ]
         }
         
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        # Asenkron HTTP isteği
+        async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(url, headers=headers, json=data)
         
-        if response.status_code == 200:
-            result = response.json()
-            ai_text = result['candidates'][0]['content']['parts'][0]['text']
-            
-            try:
-                # JSON'u parse et (Gemini direkt JSON döndürür artık)
-                itinerary = json.loads(ai_text)
-                print(f"🤖 {days} günlük detaylı plan oluşturuldu: {city}")
-                return itinerary
-                
-            except json.JSONDecodeError as e:
-                print(f"⚠️ AI itinerary parse edilemedi: {e}")
-                print(f"Raw AI response (first 500 chars): {ai_text[:500]}")
-                return generate_mock_trip_itinerary(trip_data)
-        else:
+        if response.status_code != 200:
             print(f"⚠️ Gemini API hatası: {response.status_code}")
-            print(f"Response: {response.text[:200]}")
+            print(f"Response detayı: {response.text[:500]}")
+            return generate_mock_trip_itinerary(trip_data)
+        
+        result = response.json()
+        
+        # API yanıtı kontrolü
+        if 'candidates' not in result or not result['candidates']:
+            print(f"⚠️ Gemini yanıtında candidates yok: {result}")
+            return generate_mock_trip_itinerary(trip_data)
+        
+        ai_text = result['candidates'][0]['content']['parts'][0]['text']
+        
+        # JSON parse et (Gemini direkt JSON döndürür)
+        try:
+            itinerary = json.loads(ai_text)
+            print(f"✅ {days} günlük production-ready plan oluşturuldu: {city}")
+            print(f"   - Travelers: {travelers}")
+            print(f"   - Budget: {budget}")
+            print(f"   - Interests: {interests_text}")
+            return itinerary
+            
+        except json.JSONDecodeError as e:
+            print(f"❌ AI yanıtı JSON parse edilemedi: {e}")
+            print(f"Raw AI response (first 1000 chars):\n{ai_text[:1000]}")
             return generate_mock_trip_itinerary(trip_data)
             
+    except httpx.TimeoutException:
+        print(f"⏱️ Gemini API timeout (60 saniye aşıldı)")
+        return generate_mock_trip_itinerary(trip_data)
+    except httpx.RequestError as e:
+        print(f"❌ HTTP istek hatası: {e}")
+        return generate_mock_trip_itinerary(trip_data)
     except Exception as e:
-        print(f"❌ Detaylı itinerary oluşturma hatası: {e}")
+        print(f"❌ Beklenmeyen hata: {e}")
         import traceback
         traceback.print_exc()
         return generate_mock_trip_itinerary(trip_data)

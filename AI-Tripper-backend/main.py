@@ -9,22 +9,15 @@ from database import models
 from routes import auth, routes, favorites, history, contact
 from auth.security import get_current_active_user
 
-# Create database tables asynchronously
-async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(models.Base.metadata.create_all)
-
 app = FastAPI(title="AI Tripper API", version="2.0.0")
-
-@app.on_event("startup")
-async def startup_event():
-    await init_db()
-    print("✅ Database tables created successfully")
 
 # CORS ayarları
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
