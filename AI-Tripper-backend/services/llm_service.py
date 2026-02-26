@@ -1,6 +1,6 @@
 import os
 import json
-import requests
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -46,26 +46,22 @@ async def generate_places(city: str, interests: list, stop_count: int):
                 "parts": [{
                     "text": prompt
                 }]
-            }]
+            }],
+            "generationConfig": {
+                "response_mime_type": "application/json"
+            }
         }
         
-        response = requests.post(url, headers=headers, json=data)
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, headers=headers, json=data)
         
         if response.status_code == 200:
             result = response.json()
             ai_text = result['candidates'][0]['content']['parts'][0]['text']
             
-            # JSON'u parse et
+            # JSON'u parse et (Gemini direkt JSON döndürür artık)
             try:
-                # ```json işaretlerini temizle
-                clean_text = ai_text.strip()
-                if clean_text.startswith('```json'):
-                    clean_text = clean_text[7:]
-                if clean_text.endswith('```'):
-                    clean_text = clean_text[:-3]
-                clean_text = clean_text.strip()
-                
-                places = json.loads(clean_text)
+                places = json.loads(ai_text)
                 print(f"🤖 AI ile {len(places)} yer oluşturuldu: {city}")
                 return places
                 
@@ -159,24 +155,23 @@ async def generate_personalized_trip_plan(user_data: dict):
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
         
         headers = {"Content-Type": "application/json"}
-        data = {"contents": [{"parts": [{"text": prompt}]}]}
+        data = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "response_mime_type": "application/json"
+            }
+        }
         
-        response = requests.post(url, headers=headers, json=data)
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, headers=headers, json=data)
         
         if response.status_code == 200:
             result = response.json()
             ai_text = result['candidates'][0]['content']['parts'][0]['text']
             
             try:
-                # JSON'u parse et
-                clean_text = ai_text.strip()
-                if clean_text.startswith('```json'):
-                    clean_text = clean_text[7:]
-                if clean_text.endswith('```'):
-                    clean_text = clean_text[:-3]
-                clean_text = clean_text.strip()
-                
-                plan = json.loads(clean_text)
+                # JSON'u parse et (Gemini direkt JSON döndürür artık)
+                plan = json.loads(ai_text)
                 print(f"🤖 Kişiselleştirilmiş tatil planı oluşturuldu!")
                 return plan
                 
@@ -465,28 +460,21 @@ async def generate_detailed_trip_itinerary(trip_data: dict):
             }],
             "generationConfig": {
                 "temperature": 0.7,
-                "maxOutputTokens": 8000  # Detaylı plan için daha fazla token
+                "maxOutputTokens": 8000,  # Detaylı plan için daha fazla token
+                "response_mime_type": "application/json"
             }
         }
         
-        response = requests.post(url, headers=headers, json=data, timeout=30)
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, headers=headers, json=data)
         
         if response.status_code == 200:
             result = response.json()
             ai_text = result['candidates'][0]['content']['parts'][0]['text']
             
             try:
-                # JSON'u parse et
-                clean_text = ai_text.strip()
-                if clean_text.startswith('```json'):
-                    clean_text = clean_text[7:]
-                elif clean_text.startswith('```'):
-                    clean_text = clean_text[3:]
-                if clean_text.endswith('```'):
-                    clean_text = clean_text[:-3]
-                clean_text = clean_text.strip()
-                
-                itinerary = json.loads(clean_text)
+                # JSON'u parse et (Gemini direkt JSON döndürür artık)
+                itinerary = json.loads(ai_text)
                 print(f"🤖 {days} günlük detaylı plan oluşturuldu: {city}")
                 return itinerary
                 

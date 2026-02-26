@@ -1,30 +1,34 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuthStore } from "../store/useAuthStore";
+import { useTripStore } from "../store/useTripStore";
 import Navbar from "../components/Navbar";
 import { 
     deleteAccount, 
-    getSavedRoutes, 
-    getRouteHistory
+    getRouteHistory,
+    getSavedTrips,
+    deleteSavedTrip,
+    type SavedTripResponse
 } from "../services/api";
 import type { 
-    SavedRouteResponse,
     RouteHistoryResponse
 } from "../services/api";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Heart, Settings, LogOut, Mail, Lock, Trash2 } from "lucide-react";
+import { MapPin, Heart, Settings, LogOut, Mail, Lock, Trash2, Calendar, Users, DollarSign, Eye } from "lucide-react";
 
 type TabType = "hesabim" | "planlarim" | "favorilerim" | "ayarlar";
 
 export default function Profile() {
     const { user, token, logout } = useAuthStore();
     const navigate = useNavigate();
+    const setCurrentTripPlan = useTripStore((state) => state.setCurrentTripPlan);
+    const setCurrentTripId = useTripStore((state) => state.setCurrentTripId);
     
     const [activeTab, setActiveTab] = useState<TabType>("hesabim");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [savedRoutes, setSavedRoutes] = useState<SavedRouteResponse[]>([]);
     const [routeHistory, setRouteHistory] = useState<RouteHistoryResponse[]>([]);
+    const [savedTrips, setSavedTrips] = useState<SavedTripResponse[]>([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     
     // Settings form states
@@ -42,12 +46,12 @@ export default function Profile() {
 
         const loadRoutes = async () => {
             try {
-                const [saved, history] = await Promise.all([
-                    getSavedRoutes(token),
-                    getRouteHistory(token)
+                const [history, trips] = await Promise.all([
+                    getRouteHistory(token),
+                    getSavedTrips(token)
                 ]);
-                setSavedRoutes(saved);
                 setRouteHistory(history);
+                setSavedTrips(trips);
             } catch (err) {
                 console.error("Failed to load routes:", err);
             }
@@ -115,6 +119,26 @@ export default function Profile() {
             setError(err instanceof Error ? err.message : "Failed to delete account");
             setLoading(false);
         }
+    };
+
+    const handleDeleteTrip = async (tripId: number) => {
+        if (!token) return;
+        
+        try {
+            await deleteSavedTrip(tripId, token);
+            // Listeyi güncelle
+            setSavedTrips(savedTrips.filter(trip => trip.id !== tripId));
+        } catch (err) {
+            console.error("Failed to delete trip:", err);
+            setError(err instanceof Error ? err.message : "Trip silinemedi");
+        }
+    };
+
+    const handleViewTrip = (trip: SavedTripResponse) => {
+        // Trip'i store'a kaydet ve detay sayfasına git
+        setCurrentTripPlan(trip.trip_plan);
+        setCurrentTripId(trip.id);
+        navigate("/trip-plan");
     };
 
     if (!user) {
@@ -306,21 +330,87 @@ export default function Profile() {
 
                     {activeTab === "favorilerim" && (
                         <div className="bg-white rounded-2xl shadow-lg p-8">
-                            <h2 className="text-3xl font-bold text-gray-800 mb-6">❤️ Favorilerim</h2>
+                            <h2 className="text-3xl font-bold text-gray-800 mb-6">❤️ Kayıtlı Trip'lerim</h2>
 
-                            {savedRoutes.length === 0 ? (
-                                <p className="text-gray-500 text-center py-8">
-                                    Henüz favori rotanız bulunmamaktadır
-                                </p>
+                            {savedTrips.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                    <p className="text-gray-500">Henüz kayıtlı trip'iniz bulunmamaktadır</p>
+                                    <p className="text-sm text-gray-400 mt-2">
+                                        Bir trip oluşturup "Favorilere Kaydet" butonuna tıklayın
+                                    </p>
+                                </div>
                             ) : (
-                                <div className="space-y-4">
-                                    {savedRoutes.map((route) => (
-                                        <div
-                                            key={route.id}
-                                            className="p-4 border border-gray-200 rounded-xl hover:shadow-md transition"
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {savedTrips.map((trip) => (
+                                        <motion.div
+                                            key={trip.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="border-2 border-gray-200 rounded-xl overflow-hidden hover:shadow-xl transition-all group"
                                         >
-                                            <h3 className="font-bold text-lg text-gray-800">{route.city}</h3>
-                                        </div>
+                                            {/* Header */}
+                                            <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+                                                <h3 className="font-bold text-xl mb-2">{trip.name}</h3>
+                                                <p className="text-blue-100 text-sm">
+                                                    {trip.city}, {trip.country}
+                                                </p>
+                                            </div>
+
+                                            {/* Info */}
+                                            <div className="p-6 space-y-4">
+                                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <Calendar className="w-4 h-4 text-purple-500" />
+                                                        <span className="text-gray-700">{trip.duration_days} gün</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Users className="w-4 h-4 text-pink-500" />
+                                                        <span className="text-gray-700 capitalize">{trip.travelers}</span>
+                                                    </div>
+                                                    {trip.budget && (
+                                                        <div className="flex items-center gap-2">
+                                                            <DollarSign className="w-4 h-4 text-green-500" />
+                                                            <span className="text-gray-700 capitalize">{trip.budget}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Interests */}
+                                                <div className="flex flex-wrap gap-2">
+                                                    {trip.interests.map((interest, idx) => (
+                                                        <span
+                                                            key={idx}
+                                                            className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full"
+                                                        >
+                                                            {interest}
+                                                        </span>
+                                                    ))}
+                                                </div>
+
+                                                {/* Date */}
+                                                <p className="text-xs text-gray-400">
+                                                    Kaydedildi: {new Date(trip.created_at).toLocaleDateString('tr-TR')}
+                                                </p>
+
+                                                {/* Actions */}
+                                                <div className="flex gap-3 pt-4">
+                                                    <button
+                                                        onClick={() => handleViewTrip(trip)}
+                                                        className="flex-1 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                        Görüntüle
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteTrip(trip.id)}
+                                                        className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </motion.div>
                                     ))}
                                 </div>
                             )}

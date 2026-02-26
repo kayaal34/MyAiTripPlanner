@@ -29,7 +29,9 @@ const INTERESTS_MAP: Record<string, string> = {
 
 export default function RouteForm() {
     const navigate = useNavigate();
+    const { token } = useAuthStore();
     const setCurrentTripPlan = useTripStore((state) => state.setCurrentTripPlan);
+    const setCurrentTripId = useTripStore((state) => state.setCurrentTripId);
     const [city, setCity] = useState("");
     const [days, setDays] = useState("3");
     const [travelers, setTravelers] = useState("");
@@ -37,8 +39,6 @@ export default function RouteForm() {
     const [transport, setTransport] = useState("");
     const [loadingMessage, setLoadingMessage] = useState("");
     const [normalLoading, setNormalLoading] = useState(false);
-
-    const { token } = useAuthStore();
 
     const interestOptions = [
         "Культура",
@@ -76,7 +76,7 @@ export default function RouteForm() {
         const messages = [
             "🔍 Form verileri işleniyor...",
             `🌍 ${city} için detaylı plan hazırlanıyor...`,
-            "🤖 AI gün gün aktiviteler araştırıyor...",
+            "🤖 En popüler mekanlar araştırıyor...",
             "🍽️ Restoran önerileri hazırlanıyor...",
             "🗺️ Her gün için rota oluşturuluyor...",
             "✨ Son detaylar ekleniyor..."
@@ -123,6 +123,7 @@ export default function RouteForm() {
 
             // Store'a kaydet ve sonuç sayfasına yönlendir
             setCurrentTripPlan(response.itinerary);
+            setCurrentTripId(response.trip_id);
             navigate("/trip-plan");
 
         } catch (error: any) {

@@ -2,11 +2,12 @@ fastapi
 uvicorn
 python-dotenv
 openai
-requests
+httpx
 
 # Database
 sqlalchemy
-psycopg2-binary
+asyncpg
+greenlet  # SQLAlchemy async için gerekli
 alembic
 
 # Redis (optional)

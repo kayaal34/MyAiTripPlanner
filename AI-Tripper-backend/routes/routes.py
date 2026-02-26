@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import List
 
 from database import models, schemas
@@ -9,82 +10,109 @@ from auth.security import get_current_active_user
 router = APIRouter(prefix="/api/routes", tags=["routes"])
 
 
-@router.post("/saved", response_model=schemas.SavedRoute)
-def create_saved_route(
-    route: schemas.SavedRouteCreate,
-    db: Session = Depends(get_db),
+@router.post("/saved", response_model=schemas.Trip)
+async def create_saved_route(
+    route: schemas.TripCreate,
+    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
-    db_route = models.SavedRoute(**route.dict(), user_id=current_user.id)
-    db.add(db_route)
-    db.commit()
-    db.refresh(db_route)
-    return db_route
+    """Save a trip to user's saved trips"""
+    trip_data = route.dict()
+    trip_data['user_id'] = current_user.id
+    trip_data['is_saved'] = True  # Mark as saved
+    
+    db_trip = models.Trip(**trip_data)
+    db.add(db_trip)
+    await db.commit()
+    await db.refresh(db_trip)
+    return db_trip
 
 
-@router.get("/saved", response_model=List[schemas.SavedRoute])
-def get_saved_routes(
+@router.get("/saved", response_model=List[schemas.Trip])
+async def get_saved_routes(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
-    routes = db.query(models.SavedRoute).filter(
-        models.SavedRoute.user_id == current_user.id
-    ).offset(skip).limit(limit).all()
+    """Get all saved trips (is_saved=True)"""
+    result = await db.execute(
+        select(models.Trip)
+        .filter(
+            models.Trip.user_id == current_user.id,
+            models.Trip.is_saved == True
+        )
+        .offset(skip)
+        .limit(limit)
+    )
+    routes = result.scalars().all()
     return routes
 
 
-@router.get("/saved/{route_id}", response_model=schemas.SavedRoute)
-def get_saved_route(
-    route_id: int,
-    db: Session = Depends(get_db),
+@router.get("/saved/{trip_id}", response_model=schemas.Trip)
+async def get_saved_route(
+    trip_id: int,
+    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
-    route = db.query(models.SavedRoute).filter(
-        models.SavedRoute.id == route_id,
-        models.SavedRoute.user_id == current_user.id
-    ).first()
+    """Get a specific saved trip"""
+    result = await db.execute(
+        select(models.Trip).filter(
+            models.Trip.id == trip_id,
+            models.Trip.user_id == current_user.id,
+            models.Trip.is_saved == True
+        )
+    )
+    route = result.scalar_one_or_none()
     if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
+        raise HTTPException(status_code=404, detail="Saved trip not found")
     return route
 
 
-@router.put("/saved/{route_id}", response_model=schemas.SavedRoute)
-def update_saved_route(
-    route_id: int,
-    route_update: schemas.SavedRouteCreate,
-    db: Session = Depends(get_db),
+@router.put("/saved/{trip_id}", response_model=schemas.Trip)
+async def update_saved_route(
+    trip_id: int,
+    route_update: schemas.TripUpdate,
+    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
-    db_route = db.query(models.SavedRoute).filter(
-        models.SavedRoute.id == route_id,
-        models.SavedRoute.user_id == current_user.id
-    ).first()
-    if not db_route:
-        raise HTTPException(status_code=404, detail="Route not found")
+    """Update a saved trip (rename or mark as unsaved)"""
+    result = await db.execute(
+        select(models.Trip).filter(
+            models.Trip.id == trip_id,
+            models.Trip.user_id == current_user.id
+        )
+    )
+    db_trip = result.scalar_one_or_none()
+    if not db_trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
     
-    for key, value in route_update.dict().items():
-        setattr(db_route, key, value)
+    for key, value in route_update.dict(exclude_unset=True).items():
+        setattr(db_trip, key, value)
     
-    db.commit()
-    db.refresh(db_route)
-    return db_route
+    await db.commit()
+    await db.refresh(db_trip)
+    return db_trip
 
 
-@router.delete("/saved/{route_id}")
-def delete_saved_route(
-    route_id: int,
-    db: Session = Depends(get_db),
+@router.delete("/saved/{trip_id}")
+async def delete_saved_route(
+    trip_id: int,
+    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
-    db_route = db.query(models.SavedRoute).filter(
-        models.SavedRoute.id == route_id,
-        models.SavedRoute.user_id == current_user.id
-    ).first()
-    if not db_route:
-        raise HTTPException(status_code=404, detail="Route not found")
+    """Delete a saved trip (or just mark as unsaved)"""
+    result = await db.execute(
+        select(models.Trip).filter(
+            models.Trip.id == trip_id,
+            models.Trip.user_id == current_user.id,
+            models.Trip.is_saved == True
+        )
+    )
+    db_trip = result.scalar_one_or_none()
+    if not db_trip:
+        raise HTTPException(status_code=404, detail="Saved trip not found")
     
-    db.delete(db_route)
-    db.commit()
-    return {"message": "Route deleted successfully"}
+    await db.delete(db_trip)
+    await db.commit()
+    return {"message": "Saved trip deleted successfully"}

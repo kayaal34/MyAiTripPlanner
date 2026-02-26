@@ -499,7 +499,7 @@ export type DetailedTripItinerary = {
 export type DetailedTripResponse = {
     success: boolean;
     itinerary: DetailedTripItinerary;
-    history_id: number;
+    trip_id: number;
     message: string;
 }
 
@@ -534,5 +534,209 @@ export async function createDetailedTripPlan(
     } catch (error) {
         if (error instanceof ApiError) throw error;
         throw new ApiError("Network error creating trip plan", undefined, error);
+    }
+}
+
+// ==================== SAVE TRIP TO FAVORITES ====================
+
+export type SaveTripRequest = {
+    is_saved: boolean;
+    name: string;
+}
+
+export type SavedTripResponse = {
+    id: number;
+    user_id: number;
+    name: string;
+    city: string;
+    country: string;
+    duration_days: number;
+    travelers: string;
+    interests: string[];
+    budget?: string;
+    transport: string;
+    trip_plan: DetailedTripItinerary;
+    is_saved: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * Trip'i favorilere kaydet (is_saved = true) ve isim ver
+ */
+export async function saveTripToFavorites(
+    tripId: number,
+    name: string,
+    token: string
+): Promise<SavedTripResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/routes/saved/${tripId}`, {
+            method: "PUT",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                is_saved: true,
+                name: name,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new ApiError(
+                errorData.detail || "Failed to save trip",
+                response.status,
+                errorData
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error saving trip", undefined, error);
+    }
+}
+
+/**
+ * Kayıtlı trip'leri getir (is_saved = true)
+ */
+export async function getSavedTrips(token: string): Promise<SavedTripResponse[]> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/routes/saved`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to get saved trips", response.status);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error getting saved trips", undefined, error);
+    }
+}
+
+/**
+ * Kayıtlı trip'i sil
+ */
+export async function deleteSavedTrip(tripId: number, token: string): Promise<void> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/routes/saved/${tripId}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to delete saved trip", response.status);
+        }
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error deleting trip", undefined, error);
+    }
+}
+
+
+// ============= Contact Form API =============
+
+export type ContactMessageRequest = {
+    name: string;
+    email: string;
+    subject?: string;
+    message: string;
+}
+
+export type ContactMessageResponse = {
+    id: number;
+    name: string;
+    email: string;
+    subject: string | null;
+    message: string;
+    is_read: boolean;
+    created_at: string;
+}
+
+/**
+ * İletişim formu mesajı gönder (login gerekmez)
+ */
+export async function sendContactMessage(data: ContactMessageRequest): Promise<ContactMessageResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/contact/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new ApiError(
+                errorData?.detail || "Failed to send message",
+                response.status,
+                errorData
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error sending contact message", undefined, error);
+    }
+}
+
+/**
+ * Tüm contact mesajlarını getir (admin için)
+ */
+export async function getContactMessages(token: string, unreadOnly: boolean = false): Promise<ContactMessageResponse[]> {
+    try {
+        const url = unreadOnly 
+            ? `${API_BASE_URL}/api/contact/messages?unread_only=true`
+            : `${API_BASE_URL}/api/contact/messages`;
+            
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to get contact messages", response.status);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error getting contact messages", undefined, error);
+    }
+}
+
+/**
+ * Contact mesajını okundu olarak işaretle
+ */
+export async function markMessageAsRead(messageId: number, token: string): Promise<ContactMessageResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/contact/messages/${messageId}/read`, {
+            method: "PATCH",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to mark message as read", response.status);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error marking message as read", undefined, error);
     }
 }

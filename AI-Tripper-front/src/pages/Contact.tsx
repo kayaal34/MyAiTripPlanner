@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Mail, MapPin, Phone, Send } from "lucide-react";
 import { useState } from "react";
 import Navbar from "../components/Navbar";
+import { sendContactMessage } from "../services/api";
 
 export default function Contact() {
     const [formData, setFormData] = useState({
@@ -11,16 +12,34 @@ export default function Contact() {
         message: ""
     });
     const [submitted, setSubmitted] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Burada form gönderimi yapılabilir (backend'e)
-        console.log("Form submitted:", formData);
-        setSubmitted(true);
-        setTimeout(() => {
-            setSubmitted(false);
-            setFormData({ name: "", email: "", subject: "", message: "" });
-        }, 3000);
+        setError(null);
+        setIsSubmitting(true);
+        
+        try {
+            // Backend'e mesaj gönder
+            await sendContactMessage({
+                name: formData.name,
+                email: formData.email,
+                subject: formData.subject || undefined,
+                message: formData.message
+            });
+            
+            // Başarılı, form'u gizle ve başarı mesajını göster
+            setSubmitted(true);
+            
+            // NOT: Sayfa yenilenene kadar başarı mesajı görünür kalacak
+            // setTimeout kaldırıldı, kullanıcı sayfayı manuel yenilemeli
+            
+        } catch (err) {
+            console.error("Failed to send message:", err);
+            setError(err instanceof Error ? err.message : "Mesaj gönderilemedi. Lütfen tekrar deneyin.");
+            setIsSubmitting(false);
+        }
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -152,6 +171,12 @@ export default function Contact() {
                         <div className="bg-white rounded-3xl shadow-2xl p-8">
                             <h2 className="text-3xl font-bold text-gray-800 mb-6">Напишите Нам</h2>
                             
+                            {error && (
+                                <div className="mb-6 bg-red-50 border-2 border-red-500 rounded-2xl p-4">
+                                    <p className="text-red-600 text-sm">{error}</p>
+                                </div>
+                            )}
+                            
                             {submitted ? (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
@@ -162,8 +187,11 @@ export default function Contact() {
                                         <Send className="w-8 h-8 text-white" />
                                     </div>
                                     <h3 className="text-2xl font-bold text-green-700 mb-2">Спасибо!</h3>
-                                    <p className="text-green-600">
+                                    <p className="text-green-600 mb-4">
                                         Ваше сообщение успешно отправлено. Мы свяжемся с вами в ближайшее время.
+                                    </p>
+                                    <p className="text-sm text-green-500">
+                                        Сообщение сохранено в нашей базе данных.
                                     </p>
                                 </motion.div>
                             ) : (
@@ -178,7 +206,8 @@ export default function Contact() {
                                             value={formData.name}
                                             onChange={handleChange}
                                             required
-                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition"
+                                            disabled={isSubmitting}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
                                             placeholder="Иван Иванов"
                                         />
                                     </div>
@@ -193,7 +222,8 @@ export default function Contact() {
                                             value={formData.email}
                                             onChange={handleChange}
                                             required
-                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition"
+                                            disabled={isSubmitting}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
                                             placeholder="ivan@example.com"
                                         />
                                     </div>
@@ -207,7 +237,8 @@ export default function Contact() {
                                             name="subject"
                                             value={formData.subject}
                                             onChange={handleChange}
-                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition"
+                                            disabled={isSubmitting}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
                                             placeholder="Вопрос о планировании"
                                         />
                                     </div>
@@ -222,17 +253,19 @@ export default function Contact() {
                                             onChange={handleChange}
                                             required
                                             rows={5}
-                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition resize-none"
+                                            disabled={isSubmitting}
+                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition resize-none disabled:opacity-50"
                                             placeholder="Расскажите нам, чем мы можем помочь..."
                                         />
                                     </div>
 
                                     <button
                                         type="submit"
-                                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                                        disabled={isSubmitting}
+                                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <Send className="w-5 h-5" />
-                                        Отправить Сообщение
+                                        {isSubmitting ? "Отправка..." : "Отправить Сообщение"}
                                     </button>
                                 </form>
                             )}

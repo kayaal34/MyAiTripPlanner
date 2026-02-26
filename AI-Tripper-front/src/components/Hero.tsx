@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import Navbar from "./Navbar";
 
 interface HeroProps {
@@ -12,8 +11,6 @@ export default function Hero({ onAuthClick }: HeroProps) {
     const [currentWord, setCurrentWord] = useState(0);
     
     const words = ["Приключениях", "Гастрономии", "Культуре", "Природе", "Городах", "Море", "Горах"];
-    
-    const navigate = useNavigate();
 
     // 🔥 Dinamik kelime değişimi
     useEffect(() => {
