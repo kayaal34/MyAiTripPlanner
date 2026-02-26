@@ -17,6 +17,13 @@ class UserUpdate(BaseModel):
     hobbies: Optional[List[str]] = None
     interests: Optional[List[str]] = None
     avatar_url: Optional[str] = None
+    
+    # Personal preferences for AI trip planning
+    gender: Optional[str] = None
+    preferred_countries: Optional[List[str]] = None
+    vacation_types: Optional[List[str]] = None
+    travel_style: Optional[str] = None
+    age_range: Optional[str] = None
 
 class UserLogin(BaseModel):
     username: str
@@ -30,6 +37,13 @@ class User(UserBase):
     hobbies: Optional[List[str]] = None
     interests: Optional[List[str]] = None
     avatar_url: Optional[str] = None
+    
+    # Personal preferences for AI trip planning
+    gender: Optional[str] = None
+    preferred_countries: Optional[List[str]] = None
+    vacation_types: Optional[List[str]] = None
+    travel_style: Optional[str] = None
+    age_range: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -64,19 +78,43 @@ class FavoritePlace(FavoritePlaceCreate):
         from_attributes = True
 
 
-# Route Schemas
-class SavedRouteCreate(BaseModel):
-    name: str
+# Trip Schemas (Unified SavedRoute + RouteHistory)
+class TripCreate(BaseModel):
+    """Create a new trip (either saved or just history)"""
     city: str
+    country: Optional[str] = None
+    duration_days: int
+    travelers: str  # "yalniz", "cift", "aile", "arkadaslar"
     interests: List[str]
-    places: List[dict]
-    mode: str = "walk"
-    distance_km: Optional[float] = None
-    duration_minutes: Optional[int] = None
+    budget: Optional[str] = None
+    transport: Optional[str] = None
+    mode: str = "walk"  # deprecated
+    trip_plan: dict
+    places: Optional[List[dict]] = None  # deprecated
+    is_saved: bool = False
+    name: Optional[str] = None  # Only for saved trips
 
-class SavedRoute(SavedRouteCreate):
+class TripUpdate(BaseModel):
+    """Update trip (mainly for marking as saved or renaming)"""
+    is_saved: Optional[bool] = None
+    name: Optional[str] = None
+
+class Trip(BaseModel):
+    """Trip model response"""
     id: int
     user_id: int
+    is_saved: bool
+    name: Optional[str] = None
+    city: str
+    country: Optional[str] = None
+    duration_days: int
+    travelers: str
+    interests: List[str]
+    budget: Optional[str] = None
+    transport: Optional[str] = None
+    mode: str
+    trip_plan: dict
+    places: Optional[List[dict]] = None
     created_at: datetime
     updated_at: datetime
     
@@ -84,18 +122,42 @@ class SavedRoute(SavedRouteCreate):
         from_attributes = True
 
 
-# Route History Schemas
-class RouteHistoryCreate(BaseModel):
-    city: str
-    interests: List[str]
-    stops: int
-    mode: str = "walk"
-    places: List[dict]
+# Backwards compatibility (deprecated schemas)
+class SavedRouteCreate(TripCreate):
+    """Deprecated: Use TripCreate with is_saved=True"""
+    pass
 
-class RouteHistory(RouteHistoryCreate):
+class SavedRoute(Trip):
+    """Deprecated: Use Trip"""
+    pass
+
+class RouteHistoryCreate(TripCreate):
+    """Deprecated: Use TripCreate with is_saved=False"""
+    stops: Optional[int] = None  # deprecated field
+
+class RouteHistory(Trip):
+    """Deprecated: Use Trip"""
+    pass
+
+
+# ============= Contact Schemas =============
+
+class ContactMessageCreate(BaseModel):
+    """İletişim formu mesajı oluşturma"""
+    name: str
+    email: str
+    subject: Optional[str] = None
+    message: str
+
+class ContactMessage(BaseModel):
+    """İletişim formu mesajı response"""
     id: int
-    user_id: int
+    name: str
+    email: str
+    subject: Optional[str] = None
+    message: str
+    is_read: bool
     created_at: datetime
-    
+
     class Config:
         from_attributes = True

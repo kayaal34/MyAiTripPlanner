@@ -60,10 +60,10 @@ export default function FAQ() {
         <section className="mx-auto max-w-screen-2xl px-8 py-16">
             {/* Header */}
             <div className="mb-12 text-left">
-                <h2 className="mb-4 text-4xl font-bold text-[#1e3a8a]">
+                <h2 className="mb-4 text-5xl font-display font-bold text-gradient">
                     Часто задаваемые вопросы
                 </h2>
-                <p className="text-lg text-gray-600">
+                <p className="text-lg text-gray-600 font-medium">
                     Здесь вы найдёте всё, что вас интересует
                 </p>
             </div>

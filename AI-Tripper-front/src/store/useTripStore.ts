@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Place, RouteInfo, TravelMode } from "../type";
+import type { DetailedTripItinerary } from "../services/api";
 
 // Store'da tutacağımız state'in type'ı
 interface TripState {
@@ -12,6 +13,10 @@ interface TripState {
     // API'den gelen veriler
     places: Place[];
     route: RouteInfo | null;
+    
+    // Yeni AI Trip Planner
+    currentTripPlan: DetailedTripItinerary | null;
+    currentTripId: number | null;
 
     // Loading/Error durumları
     isLoading: boolean;
@@ -24,6 +29,8 @@ interface TripState {
     setMode: (mode: TravelMode) => void;
     setPlaces: (places: Place[]) => void;
     setRoute: (route: RouteInfo | null) => void;
+    setCurrentTripPlan: (plan: DetailedTripItinerary | null) => void;
+    setCurrentTripId: (tripId: number | null) => void;
     setIsLoading: (isLoading: boolean) => void;
     setError: (error: string | null) => void;
     resetTrip: () => void;
@@ -37,6 +44,8 @@ const initialState = {
     mode: "walk" as TravelMode,
     places: [],
     route: null,
+    currentTripId: null,
+    currentTripPlan: null,
     isLoading: false,
     error: null,
 };
@@ -53,6 +62,8 @@ export const useTripStore = create<TripState>((set) => ({
     setMode: (mode) => set({ mode }),
     setPlaces: (places) => set({ places }),
     setRoute: (route) => set({ route }),
+    setCurrentTripId: (tripId) => set({ currentTripId: tripId }),
+    setCurrentTripPlan: (plan) => set({ currentTripPlan: plan }),
     setIsLoading: (isLoading) => set({ isLoading }),
     setError: (error) => set({ error }),
 

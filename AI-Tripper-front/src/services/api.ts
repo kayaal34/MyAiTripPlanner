@@ -120,6 +120,13 @@ export type UserResponse = {
     interests?: string[];
     avatar_url?: string;
     created_at: string;
+    
+    // Personal preferences for AI trip planning
+    gender?: string;
+    preferred_countries?: string[];
+    vacation_types?: string[];
+    travel_style?: string;
+    age_range?: string;
 }
 
 /**
@@ -216,6 +223,13 @@ export type UpdateProfileRequest = {
     hobbies?: string[];
     interests?: string[];
     avatar_url?: string;
+    
+    // Personal preferences for AI trip planning
+    gender?: string;
+    preferred_countries?: string[];
+    vacation_types?: string[];
+    travel_style?: string;
+    age_range?: string;
 }
 
 /**
@@ -339,5 +353,390 @@ export async function getRouteHistory(token: string): Promise<RouteHistoryRespon
     } catch (error) {
         if (error instanceof ApiError) throw error;
         throw new ApiError("Network error getting history", undefined, error);
+    }
+}
+
+/**
+ * Create personalized trip plan based on user preferences
+ */
+export async function createPersonalizedTrip(token: string): Promise<PersonalizedTripResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/personalized-trip`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to create personalized trip", response.status);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error creating trip", undefined, error);
+    }
+}
+
+export type PersonalizedTripResponse = {
+    success: boolean;
+    plan: {
+        destination: string;
+        trip_duration: string;
+        trip_theme: string;
+        recommendations: Array<{
+            day: number;
+            title: string;
+            activities: string[];
+            places: string[];
+            tips: string;
+        }>;
+        personal_notes: string;
+        budget_estimate: string;
+        best_time: string;
+    };
+    message: string;
+}
+
+// ==================== DETAILED TRIP PLANNER API ====================
+
+export type TripPlanRequest = {
+    city: string;
+    days: number;
+    travelers: string;
+    interests: string[];
+    transport: string;
+    budget?: string;
+    start_date?: string;
+}
+
+export type DailyActivity = {
+    name: string;
+    type: string;
+    address: string;
+    coordinates: { lat: number; lng: number };
+    duration: string;
+    cost: string;
+    description: string;
+    tips?: string;
+}
+
+export type Restaurant = {
+    name: string;
+    address: string;
+    coordinates: { lat: number; lng: number };
+    cuisine: string;
+    average_cost: string;
+    recommended_dishes?: string[];
+    description?: string;
+    atmosphere?: string;
+}
+
+export type DailyItinerary = {
+    day: number;
+    date: string;
+    title: string;
+    morning: {
+        time: string;
+        activities: DailyActivity[];
+    };
+    lunch: {
+        time: string;
+        restaurant: Restaurant;
+    };
+    afternoon: {
+        time: string;
+        activities: DailyActivity[];
+    };
+    evening: {
+        time: string;
+        dinner: Restaurant;
+        night_activities: string[];
+    };
+    daily_tips: {
+        weather: string;
+        clothing: string;
+        important_notes: string;
+        estimated_daily_budget: string;
+    };
+    transportation: {
+        getting_around: string;
+        estimated_transport_cost: string;
+    };
+}
+
+export type AccommodationSuggestion = {
+    name: string;
+    type: string;
+    location: string;
+    price_range: string;
+    why_recommended: string;
+}
+
+export type DetailedTripItinerary = {
+    trip_summary: {
+        destination: string;
+        duration_days: number;
+        travelers: string;
+        total_estimated_cost: string;
+        best_season: string;
+        weather_forecast: string;
+    };
+    daily_itinerary: DailyItinerary[];
+    accommodation_suggestions: AccommodationSuggestion[];
+    general_tips: {
+        local_customs: string;
+        safety: string;
+        money: string;
+        emergency_contacts: string;
+        useful_phrases: string[];
+    };
+    packing_list: string[];
+}
+
+export type DetailedTripResponse = {
+    success: boolean;
+    itinerary: DetailedTripItinerary;
+    trip_id: number;
+    message: string;
+}
+
+/**
+ * Detaylı gün gün tatil planı oluştur
+ * Her gün için sabah, öğle, akşam aktiviteleri, restoranlar ve ipuçları içerir
+ */
+export async function createDetailedTripPlan(
+    request: TripPlanRequest,
+    token: string
+): Promise<DetailedTripResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/trip-planner`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(request),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new ApiError(
+                errorData.detail || "Failed to create trip plan",
+                response.status,
+                errorData
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error creating trip plan", undefined, error);
+    }
+}
+
+// ==================== SAVE TRIP TO FAVORITES ====================
+
+export type SaveTripRequest = {
+    is_saved: boolean;
+    name: string;
+}
+
+export type SavedTripResponse = {
+    id: number;
+    user_id: number;
+    name: string;
+    city: string;
+    country: string;
+    duration_days: number;
+    travelers: string;
+    interests: string[];
+    budget?: string;
+    transport: string;
+    trip_plan: DetailedTripItinerary;
+    is_saved: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * Trip'i favorilere kaydet (is_saved = true) ve isim ver
+ */
+export async function saveTripToFavorites(
+    tripId: number,
+    name: string,
+    token: string
+): Promise<SavedTripResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/routes/saved/${tripId}`, {
+            method: "PUT",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                is_saved: true,
+                name: name,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new ApiError(
+                errorData.detail || "Failed to save trip",
+                response.status,
+                errorData
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error saving trip", undefined, error);
+    }
+}
+
+/**
+ * Kayıtlı trip'leri getir (is_saved = true)
+ */
+export async function getSavedTrips(token: string): Promise<SavedTripResponse[]> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/routes/saved`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to get saved trips", response.status);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error getting saved trips", undefined, error);
+    }
+}
+
+/**
+ * Kayıtlı trip'i sil
+ */
+export async function deleteSavedTrip(tripId: number, token: string): Promise<void> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/routes/saved/${tripId}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to delete saved trip", response.status);
+        }
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error deleting trip", undefined, error);
+    }
+}
+
+
+// ============= Contact Form API =============
+
+export type ContactMessageRequest = {
+    name: string;
+    email: string;
+    subject?: string;
+    message: string;
+}
+
+export type ContactMessageResponse = {
+    id: number;
+    name: string;
+    email: string;
+    subject: string | null;
+    message: string;
+    is_read: boolean;
+    created_at: string;
+}
+
+/**
+ * İletişim formu mesajı gönder (login gerekmez)
+ */
+export async function sendContactMessage(data: ContactMessageRequest): Promise<ContactMessageResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/contact/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new ApiError(
+                errorData?.detail || "Failed to send message",
+                response.status,
+                errorData
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error sending contact message", undefined, error);
+    }
+}
+
+/**
+ * Tüm contact mesajlarını getir (admin için)
+ */
+export async function getContactMessages(token: string, unreadOnly: boolean = false): Promise<ContactMessageResponse[]> {
+    try {
+        const url = unreadOnly 
+            ? `${API_BASE_URL}/api/contact/messages?unread_only=true`
+            : `${API_BASE_URL}/api/contact/messages`;
+            
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to get contact messages", response.status);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error getting contact messages", undefined, error);
+    }
+}
+
+/**
+ * Contact mesajını okundu olarak işaretle
+ */
+export async function markMessageAsRead(messageId: number, token: string): Promise<ContactMessageResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/contact/messages/${messageId}/read`, {
+            method: "PATCH",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to mark message as read", response.status);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error marking message as read", undefined, error);
     }
 }

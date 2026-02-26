@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import timedelta
 
 from database import models, schemas
@@ -19,16 +19,16 @@ router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 
 @router.post("/register", response_model=schemas.User, status_code=status.HTTP_201_CREATED)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+async def register(user: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
     # Check if user exists
-    db_user = get_user_by_username(db, user.username)
+    db_user = await get_user_by_username(db, user.username)
     if db_user:
         raise HTTPException(
             status_code=400,
             detail="Username already registered"
         )
     
-    db_user = get_user_by_email(db, user.email)
+    db_user = await get_user_by_email(db, user.email)
     if db_user:
         raise HTTPException(
             status_code=400,
@@ -44,14 +44,14 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
         hashed_password=hashed_password
     )
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    await db.commit()
+    await db.refresh(db_user)
     return db_user
 
 
 @router.post("/login", response_model=schemas.Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+    user = await authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -67,14 +67,14 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 @router.get("/me", response_model=schemas.User)
-def read_users_me(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
+async def read_users_me(db: AsyncSession = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
     return current_user
 
 
 @router.put("/me", response_model=schemas.User)
-def update_user_profile(
+async def update_user_profile(
     user_update: schemas.UserUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
     # Update user fields
@@ -89,17 +89,29 @@ def update_user_profile(
     if user_update.avatar_url is not None:
         current_user.avatar_url = user_update.avatar_url
     
-    db.commit()
-    db.refresh(current_user)
+    # Update new personal preference fields
+    if user_update.gender is not None:
+        current_user.gender = user_update.gender
+    if user_update.preferred_countries is not None:
+        current_user.preferred_countries = user_update.preferred_countries
+    if user_update.vacation_types is not None:
+        current_user.vacation_types = user_update.vacation_types
+    if user_update.travel_style is not None:
+        current_user.travel_style = user_update.travel_style
+    if user_update.age_range is not None:
+        current_user.age_range = user_update.age_range
+    
+    await db.commit()
+    await db.refresh(current_user)
     return current_user
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user_account(
-    db: Session = Depends(get_db),
+async def delete_user_account(
+    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
     # Delete user and all related data (cascade)
-    db.delete(current_user)
-    db.commit()
+    await db.delete(current_user)
+    await db.commit()
     return None

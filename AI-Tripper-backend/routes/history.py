@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import List
 
 from database import models, schemas
@@ -9,27 +10,38 @@ from auth.security import get_current_active_user
 router = APIRouter(prefix="/api/history", tags=["history"])
 
 
-@router.post("/", response_model=schemas.RouteHistory)
-def create_history(
-    history: schemas.RouteHistoryCreate,
-    db: Session = Depends(get_db),
+@router.post("/", response_model=schemas.Trip)
+async def create_history(
+    history: schemas.TripCreate,
+    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
-    db_history = models.RouteHistory(**history.dict(), user_id=current_user.id)
-    db.add(db_history)
-    db.commit()
-    db.refresh(db_history)
-    return db_history
+    """Create a trip history entry (is_saved=False)"""
+    trip_data = history.dict()
+    trip_data['user_id'] = current_user.id
+    trip_data['is_saved'] = False  # History entries are not saved
+    
+    db_trip = models.Trip(**trip_data)
+    db.add(db_trip)
+    await db.commit()
+    await db.refresh(db_trip)
+    return db_trip
 
 
-@router.get("/", response_model=List[schemas.RouteHistory])
-def get_history(
+@router.get("/", response_model=List[schemas.Trip])
+async def get_history(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
-    history = db.query(models.RouteHistory).filter(
-        models.RouteHistory.user_id == current_user.id
-    ).order_by(models.RouteHistory.created_at.desc()).offset(skip).limit(limit).all()
+    """Get all trip history (both saved and unsaved)"""
+    result = await db.execute(
+        select(models.Trip)
+        .filter(models.Trip.user_id == current_user.id)
+        .order_by(models.Trip.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    history = result.scalars().all()
     return history

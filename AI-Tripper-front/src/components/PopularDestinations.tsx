@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface Destination {
     id: number;
@@ -123,10 +123,10 @@ export default function PopularDestinations() {
         return (
             <section className="w-full max-w-7xl mx-auto px-6 py-16">
                 <div className="mb-12 text-center">
-                    <h2 className="text-4xl font-bold text-[#1e3a8a] mb-3">
+                    <h2 className="text-5xl font-display font-bold text-gradient mb-4">
                         Вдохновляющие маршруты
                     </h2>
-                    <p className="text-lg text-gray-600">
+                    <p className="text-lg text-gray-600 font-medium">
                         Загрузка изображений...
                     </p>
                 </div>
@@ -146,10 +146,10 @@ export default function PopularDestinations() {
         <section className="w-full max-w-7xl mx-auto px-6 py-16">
             {/* Header */}
             <div className="mb-12 text-center">
-                <h2 className="text-4xl font-bold text-[#1e3a8a] mb-3">
+                <h2 className="text-5xl font-display font-bold text-gradient mb-4">
                     Вдохновляющие маршруты
                 </h2>
-                <p className="text-lg text-gray-600">
+                <p className="text-lg text-gray-600 font-medium">
                     Ознакомьтесь с популярными и тщательно подготовленными планами маршрутов.
                 </p>
             </div>

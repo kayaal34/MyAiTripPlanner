@@ -78,8 +78,8 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[2000]">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative animate-slide-in">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[2000] animate-backdrop-fade">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative animate-modal-appear border-t-4 border-blue-600">
                 {/* Close Button */}
                 <button
                     onClick={onClose}
@@ -89,14 +89,16 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                 </button>
 
                 {/* Title */}
-                <h2 className="text-3xl font-bold text-[#1e3a8a] mb-2">
-                    {isLogin ? "Вход" : "Регистрация"}
-                </h2>
-                <p className="text-gray-600 mb-6">
-                    {isLogin
-                        ? "Войдите, чтобы сохранить ваши маршруты"
-                        : "Создайте аккаунт для доступа ко всем функциям"}
-                </p>
+                <div className="mb-6">
+                    <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-900 via-blue-700 to-indigo-600 bg-clip-text text-transparent mb-2">
+                        {isLogin ? "Вход" : "Регистрация"}
+                    </h2>
+                    <p className="text-gray-600">
+                        {isLogin
+                            ? "Войдите, чтобы сохранить ваши маршруты"
+                            : "Создайте аккаунт для доступа ко всем функциям"}
+                    </p>
+                </div>
 
                 {/* Error Message */}
                 {error && (
@@ -141,7 +143,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3 rounded-lg font-semibold transition-all disabled:opacity-50"
+                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
                         >
                             {loading ? "Вход..." : "Войти"}
                         </button>
@@ -213,7 +215,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white py-3 rounded-lg font-semibold transition-all disabled:opacity-50"
+                            className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
                         >
                             {loading ? "Регистрация..." : "Зарегистрироваться"}
                         </button>

@@ -14,35 +14,57 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    # Profile fields
+    # Profile fields (opsiyonel, AI personalization için)
     bio = Column(Text, nullable=True)
-    hobbies = Column(JSON, nullable=True)  # ["Photography", "Hiking", "Food"]
-    interests = Column(JSON, nullable=True)  # ["culture", "adventure", "food"]
     avatar_url = Column(String, nullable=True)
     
+    # AI için kullanıcı profil tercihleri (sabit, nadiren değişir)
+    gender = Column(String, nullable=True)  # "erkek", "kadin", "diger", None
+    age_range = Column(String, nullable=True)  # "18-25", "26-35", "36-45", "46+"
+    travel_style = Column(String, nullable=True)  # "rahat", "aktif", "luks", "butce"
+    
     # Relationships
-    routes = relationship("SavedRoute", back_populates="user", cascade="all, delete-orphan")
+    trips = relationship("Trip", back_populates="user", cascade="all, delete-orphan")
     favorites = relationship("FavoritePlace", back_populates="user", cascade="all, delete-orphan")
-    route_history = relationship("RouteHistory", back_populates="user", cascade="all, delete-orphan")
 
 
-class SavedRoute(Base):
-    __tablename__ = "saved_routes"
+class Trip(Base):
+    """
+    Birleştirilmiş tatil planları tablosu (eski SavedRoute + RouteHistory)
+    - is_saved=False: Kullanıcının arama geçmişi (history)
+    - is_saved=True: Kullanıcının kaydettiği planlar (saved)
+    """
+    __tablename__ = "trips"
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    name = Column(String, nullable=False)
-    city = Column(String, nullable=False)
-    interests = Column(JSON, nullable=False)  # ["culture", "food"]
-    places = Column(JSON, nullable=False)  # [{"name": "...", "lat": ..., "lng": ...}]
-    mode = Column(String, default="walk")  # walk, driving, plane
-    distance_km = Column(Float, nullable=True)
-    duration_minutes = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Kayıt durumu
+    is_saved = Column(Boolean, default=False, index=True)  # Kaydedildi mi?
+    name = Column(String, nullable=True)  # Kullanıcının verdiği isim (sadece is_saved=True için)
+    
+    # Tatil bilgileri
+    city = Column(String, nullable=False, index=True)
+    country = Column(String, nullable=True)
+    duration_days = Column(Integer, nullable=False)  # Kaç günlük plan
+    
+    # Seyahat tercihleri
+    travelers = Column(String, nullable=False)  # "yalniz", "cift", "aile", "arkadaslar"
+    interests = Column(JSON, nullable=False)  # ["kultur", "yemek", "doga"]
+    budget = Column(String, nullable=True)  # "dusuk", "orta", "yuksek"
+    transport = Column(String, nullable=True)  # "ucak", "araba", "farketmez"
+    mode = Column(String, default="walk")  # Eski sistemden kalan (deprecated)
+    
+    # AI plan verisi
+    trip_plan = Column(JSON, nullable=False)  # Detaylı gün gün plan (AI'dan gelen)
+    places = Column(JSON, nullable=True)  # Eski sistemden gelen yerler (deprecated)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    user = relationship("User", back_populates="routes")
+    user = relationship("User", back_populates="trips")
 
 
 class FavoritePlace(Base):
@@ -64,17 +86,14 @@ class FavoritePlace(Base):
     user = relationship("User", back_populates="favorites")
 
 
-class RouteHistory(Base):
-    __tablename__ = "route_history"
+class ContactMessage(Base):
+    """İletişim formu mesajları"""
+    __tablename__ = "contact_messages"
     
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    city = Column(String, nullable=False)
-    interests = Column(JSON, nullable=False)
-    stops = Column(Integer, nullable=False)
-    mode = Column(String, default="walk")
-    places = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    user = relationship("User", back_populates="route_history")
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False, index=True)
+    subject = Column(String, nullable=True)
+    message = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False, index=True)  # Okundu mu?
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
