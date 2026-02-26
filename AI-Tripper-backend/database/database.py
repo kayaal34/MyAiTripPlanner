@@ -1,7 +1,7 @@
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
-import redis
+import redis.asyncio as redis
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -33,14 +33,27 @@ AsyncSessionLocal = async_sessionmaker(
 # Create Base class
 Base = declarative_base()
 
-# Redis client (optional - senkron kalıyor, istenirse redis.asyncio kullanılabilir)
-try:
-    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-    redis_client = redis.from_url(REDIS_URL, decode_responses=True)
-    redis_client.ping()  # Test connection
-except Exception as e:
-    print(f"Redis connection failed: {e}. Continuing without cache.")
-    redis_client = None
+# Redis client (async)
+redis_client = None
+
+async def init_redis():
+    """Redis bağlantısını başlat (async)"""
+    global redis_client
+    try:
+        REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+        redis_client = await redis.from_url(REDIS_URL, decode_responses=True)
+        await redis_client.ping()
+        print("✅ Redis connected successfully")
+    except Exception as e:
+        print(f"⚠️ Redis connection failed: {e}. Continuing without cache.")
+        redis_client = None
+
+async def close_redis():
+    """Redis bağlantısını kapat (async)"""
+    global redis_client
+    if redis_client:
+        await redis_client.close()
+        print("✅ Redis connection closed")
 
 # Async Dependency
 async def get_db():
