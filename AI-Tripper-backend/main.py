@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from services.llm_service import generate_places, generate_personalized_trip_plan, generate_detailed_trip_itinerary
+from services.llm_service import generate_detailed_trip_itinerary
 from database.database import engine, get_db
 from database import models
 from routes import auth, routes, favorites, history, contact
@@ -16,7 +16,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://localhost:5173"
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175"
     ],
     allow_credentials=True,
     allow_methods=["*"],
