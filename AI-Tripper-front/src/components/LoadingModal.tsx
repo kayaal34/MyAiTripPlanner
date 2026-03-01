@@ -32,7 +32,7 @@ export default function LoadingModal({ isOpen }: LoadingModalProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md"
         >
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
