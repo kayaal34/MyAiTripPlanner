@@ -12,24 +12,28 @@ load_dotenv()
 # Sadece gerçek verilerle plan oluşturulacak
 # =====================================================================
 
-async def get_country_context(city: str) -> str:
-    """REST Countries API'den ülke bilgilerini al ve LLM için context oluştur"""
+async def get_country_context(city: str) -> tuple[str, str]:
+    """REST Countries API'den ülke bilgilerini al ve LLM için context + bayrak URL döndür"""
     try:
         # Şehir isminden ülke ismini tahmin et (basit mapping)
         city_to_country = {
-            "paris": "france", "istanbul": "turkey", "roma": "italy", "rome": "italy",
+            "paris": "france", "istanbul": "turkey", "i̇stanbul": "turkey", "roma": "italy", "rome": "italy",
             "barselona": "spain", "barcelona": "spain", "londra": "united kingdom", "london": "united kingdom",
             "amsterdam": "netherlands", "berlin": "germany", "prag": "czechia", "prague": "czechia",
             "viyana": "austria", "vienna": "austria", "budapeşte": "hungary", "budapest": "hungary",
             "atina": "greece", "athens": "greece", "dubai": "united arab emirates",
             "tokyo": "japan", "new york": "united states", "bangkok": "thailand",
             "singapur": "singapore", "singapore": "singapore", "sydney": "australia",
-            "lizbon": "portugal", "lisbon": "portugal", "madrid": "spain", "münih": "germany", "munich": "germany"
+            "lizbon": "portugal", "lisbon": "portugal", "madrid": "spain", "münih": "germany", "munich": "germany",
+            "ankara": "turkey", "antalya": "turkey", "bodrum": "turkey", "kapadokya": "turkey"
         }
         
-        country_name = city_to_country.get(city.lower(), "")
+        # Şehir ismindeki ", Ülke" kısmını temizle
+        city_clean = city.split(",")[0].strip().lower()
+        country_name = city_to_country.get(city_clean, "")
+        
         if not country_name:
-            return ""
+            return ("", "")
         
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -45,6 +49,7 @@ async def get_country_context(city: str) -> str:
                     languages = ", ".join(list(country.get("languages", {}).values())[:3])
                     currencies = ", ".join(list(country.get("currencies", {}).keys())[:2])
                     timezone = country.get("timezones", [""])[0]
+                    flag_url = country.get("flags", {}).get("png", "")
                     
                     context = f"""
 🌍 ÜLKE BİLGİLERİ ({country.get('name', {}).get('common', '')}):  
@@ -60,11 +65,11 @@ async def get_country_context(city: str) -> str:
 - Saat dilimi farkını belirt (Türkiye ile karşılaştır)
 - Kültürel özellikler hakkında ipuçları ver
                     """
-                    return context
+                    return (context, flag_url)
     except Exception as e:
         print(f"⚠️ Ülke bilgisi alınamadı: {e}")
     
-    return ""
+    return ("", "")
 
 async def generate_detailed_trip_itinerary(trip_data: dict):
     """
