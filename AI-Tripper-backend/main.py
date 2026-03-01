@@ -117,8 +117,16 @@ async def get_popular_destinations():
     """Popüler şehir ve ülke listesini döndür (autocomplete için)"""
     try:
         import json
-        with open("data/popular_destinations.json", "r", encoding="utf-8") as f:
+        import os
+        
+        # Backend klasöründen data/popular_destinations.json'u oku
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        json_path = os.path.join(current_dir, "data", "popular_destinations.json")
+        
+        with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
+        
+        print(f"✅ {len(data['cities'])} şehir yüklendi")
         return {"success": True, "destinations": data["cities"]}
     except Exception as e:
         print(f"❌ Şehir listesi yüklenemedi: {e}")
@@ -133,6 +141,46 @@ async def get_popular_destinations():
                 {"name": "Londra", "country": "İngiltere"}
             ]
         }
+
+@app.get("/api/country-info/{country_name}")
+async def get_country_info(country_name: str):
+    """REST Countries API'den ülke bilgilerini çek"""
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            # REST Countries API v3.1
+            response = await client.get(
+                f"https://restcountries.com/v3.1/name/{country_name}?fullText=false",
+                timeout=10.0
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 0:
+                    country = data[0]  # İlk sonucu al
+                    
+                    # İhtiyacımız olan bilgileri çıkar
+                    info = {
+                        "name": country.get("name", {}).get("common", country_name),
+                        "capital": country.get("capital", [""])[0] if country.get("capital") else "",
+                        "region": country.get("region", ""),
+                        "subregion": country.get("subregion", ""),
+                        "languages": list(country.get("languages", {}).values()),
+                        "currencies": list(country.get("currencies", {}).keys()),
+                        "timezones": country.get("timezones", []),
+                        "borders": country.get("borders", []),
+                        "population": country.get("population", 0),
+                        "flag": country.get("flag", ""),
+                        "coat_of_arms": country.get("coatOfArms", {}).get("png", "")
+                    }
+                    
+                    print(f"✅ {info['name']} ülke bilgileri alındı")
+                    return {"success": True, "country_info": info}
+            
+            return {"success": False, "error": "Ülke bulunamadı"}
+    except Exception as e:
+        print(f"❌ Ülke bilgisi alınamadı: {e}")
+        return {"success": False, "error": str(e)}
 
 @app.post("/api/places")
 async def get_places(data: RouteRequest):
@@ -212,29 +260,14 @@ async def create_detailed_trip_plan(
         # AI ile detaylı itinerary oluştur
         itinerary = await generate_detailed_trip_itinerary(trip_data)
         
-        # Veritabanına kaydet (is_saved=False - başlangıçta sadece history)
-        trip_entry = models.Trip(
-            user_id=current_user.id,
-            city=trip_request.city,
-            country=itinerary.get("trip_summary", {}).get("destination", ""),
-            duration_days=trip_request.days,
-            travelers=trip_request.travelers,
-            interests=trip_request.interests,
-            budget=trip_request.budget,
-            transport=trip_request.transport,
-            trip_plan=itinerary,
-            is_saved=False
-        )
-        db.add(trip_entry)
-        await db.commit()
-        await db.refresh(trip_entry)
+        # NOT: Artık veritabanına otomatik kaydetmiyoruz!
+        # Kullanıcı "Kaydet" butonuna basarsa o zaman kaydedilecek.
         
-        print(f"✅ {trip_request.days} günlük plan başarıyla oluşturuldu ve kaydedildi")
+        print(f"✅ {trip_request.days} günlük plan başarıyla oluşturuldu (DB'ye kaydedilmedi)")
         
         return {
             "success": True,
             "itinerary": itinerary,
-            "trip_id": trip_entry.id,
             "message": f"{trip_request.city} için {trip_request.days} günlük tatil planınız hazır!"
         }
         

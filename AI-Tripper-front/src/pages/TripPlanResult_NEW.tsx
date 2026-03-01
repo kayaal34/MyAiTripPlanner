@@ -3,14 +3,62 @@ import { useNavigate } from "react-router-dom";
 import { useTripStore } from "../store/useTripStore";
 import { useAuthStore } from "../store/useAuthStore";
 import Navbar from "../components/Navbar";
-import { MapPin, Calendar, Users, DollarSign, Cloud, Coffee, UtensilsCrossed, Sun, Moon, Info, Hotel, AlertCircle, Phone, MessageSquare, Package, Heart, X } from "lucide-react";
+import TripMap from "../components/TripMap";
+import { MapPin, Calendar, Users, DollarSign, Cloud, Coffee, UtensilsCrossed, Sun, Moon, Hotel, AlertCircle, Phone, MessageSquare, Package, Heart, X, ChevronDown, ChevronUp, Map } from "lucide-react";
 import { saveTripToFavorites } from "../services/api";
 import { motion, AnimatePresence } from "framer-motion";
+
+// Accordion bileşeni
+type AccordionProps = {
+    title: string;
+    icon: React.ReactNode;
+    children: React.ReactNode;
+    defaultOpen?: boolean;
+};
+
+function Accordion({ title, icon, children, defaultOpen = false }: AccordionProps) {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+
+    return (
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-4">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full px-6 py-5 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+                <div className="flex items-center gap-3">
+                    {icon}
+                    <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+                </div>
+                {isOpen ? (
+                    <ChevronUp className="w-6 h-6 text-gray-400" />
+                ) : (
+                    <ChevronDown className="w-6 h-6 text-gray-400" />
+                )}
+            </button>
+            
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="px-6 py-5 border-t border-gray-100">
+                            {children}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
 
 export default function TripPlanResult() {
     const navigate = useNavigate();
     const currentTripPlan = useTripStore((state) => state.currentTripPlan);
-    const currentTripId = useTripStore((state) => state.currentTripId);
+    const currentTripFormData = useTripStore((state) => state.currentTripFormData);
     const { user, token } = useAuthStore();
     
     // Save modal state
@@ -29,7 +77,7 @@ export default function TripPlanResult() {
 
     // Trip kaydetme fonksiyonu
     const handleSaveTrip = async () => {
-        if (!token || !currentTripId) {
+        if (!token || !currentTripPlan || !currentTripFormData) {
             setSaveError("Lütfen giriş yapın");
             return;
         }
@@ -43,7 +91,17 @@ export default function TripPlanResult() {
         setSaveError(null);
 
         try {
-            await saveTripToFavorites(currentTripId, tripName, token);
+            await saveTripToFavorites(
+                currentTripPlan,
+                tripName,
+                currentTripFormData.city,
+                currentTripFormData.days,
+                currentTripFormData.travelers,
+                currentTripFormData.interests,
+                currentTripFormData.budget,
+                currentTripFormData.transport,
+                token
+            );
             setSaveSuccess(true);
             setTimeout(() => {
                 setShowSaveModal(false);
@@ -62,7 +120,60 @@ export default function TripPlanResult() {
         return null;
     }
 
-    const { trip_summary, daily_itinerary, accommodation_suggestions, general_tips, packing_list } = currentTripPlan;
+    const { trip_summary, daily_itinerary, accommodation_suggestions, general_tips, packing_list, country_flag } = currentTripPlan;
+
+    // Harita için tüm aktivite lokasyonlarını topla
+    const mapLocations: { name: string; lat: number; lng: number; description?: string }[] = [];
+    
+    daily_itinerary.forEach((day: any) => {
+        // Sabah aktiviteleri
+        if (day.morning?.activities) {
+            day.morning.activities.forEach((activity: any) => {
+                if (activity.coordinates?.lat && activity.coordinates?.lng) {
+                    mapLocations.push({
+                        name: activity.name,
+                        lat: activity.coordinates.lat,
+                        lng: activity.coordinates.lng,
+                        description: `${day.day}. Gün - Sabah`
+                    });
+                }
+            });
+        }
+
+        // Öğle yemeği
+        if (day.lunch?.restaurant?.coordinates?.lat && day.lunch?.restaurant?.coordinates?.lng) {
+            mapLocations.push({
+                name: day.lunch.restaurant.name,
+                lat: day.lunch.restaurant.coordinates.lat,
+                lng: day.lunch.restaurant.coordinates.lng,
+                description: `${day.day}. Gün - Öğle Yemeği`
+            });
+        }
+
+        // Öğleden sonra aktiviteleri
+        if (day.afternoon?.activities) {
+            day.afternoon.activities.forEach((activity: any) => {
+                if (activity.coordinates?.lat && activity.coordinates?.lng) {
+                    mapLocations.push({
+                        name: activity.name,
+                        lat: activity.coordinates.lat,
+                        lng: activity.coordinates.lng,
+                        description: `${day.day}. Gün - Öğleden Sonra`
+                    });
+                }
+            });
+        }
+
+        // Akşam yemeği
+        if (day.evening?.dinner?.coordinates?.lat && day.evening?.dinner?.coordinates?.lng) {
+            mapLocations.push({
+                name: day.evening.dinner.name,
+                lat: day.evening.dinner.coordinates.lat,
+                lng: day.evening.dinner.coordinates.lng,
+                description: `${day.day}. Gün - Akşam Yemeği`
+            });
+        }
+    });
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
@@ -158,287 +269,294 @@ export default function TripPlanResult() {
             </AnimatePresence>
             
             <div className="container mx-auto px-4 py-24">
-                {/* Trip Summary Header */}
-                <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-                    <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-6">
-                        Ваш идеальный маршрут готов! 🎉
-                    </h1>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="flex items-center gap-3">
-                            <MapPin className="w-8 h-8 text-blue-500" />
+                {/* Header with Flag */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-3xl shadow-2xl p-8 mb-8 text-white"
+                >
+                    <div className="flex items-center gap-4 mb-6">
+                        {country_flag && (
+                            <img 
+                                src={country_flag} 
+                                alt="Country Flag" 
+                                className="w-16 h-12 rounded-lg shadow-lg object-cover"
+                            />
+                        )}
+                        <h1 className="text-4xl font-bold flex-1">
+                            {trip_summary.destination} Rehberiniz Hazır! 🎉
+                        </h1>
+                    </div>
+
+                    {/* Quick Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 flex items-center gap-3">
+                            <Calendar className="w-8 h-8" />
                             <div>
-                                <p className="text-sm text-gray-500">Направление</p>
-                                <p className="font-semibold text-lg">{trip_summary.destination}</p>
+                                <p className="text-sm opacity-80">Süre</p>
+                                <p className="font-bold text-lg">{trip_summary.duration_days} Gün</p>
                             </div>
                         </div>
-                        
-                        <div className="flex items-center gap-3">
-                            <Calendar className="w-8 h-8 text-purple-500" />
+
+                        <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 flex items-center gap-3">
+                            <Users className="w-8 h-8" />
                             <div>
-                                <p className="text-sm text-gray-500">Продолжительность</p>
-                                <p className="font-semibold text-lg">{trip_summary.duration_days} дней</p>
+                                <p className="text-sm opacity-80">Gezginler</p>
+                                <p className="font-bold text-lg capitalize">{trip_summary.travelers}</p>
                             </div>
                         </div>
-                        
-                        <div className="flex items-center gap-3">
-                            <Users className="w-8 h-8 text-pink-500" />
+
+                        <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 flex items-center gap-3">
+                            <DollarSign className="w-8 h-8" />
                             <div>
-                                <p className="text-sm text-gray-500">Путешественники</p>
-                                <p className="font-semibold text-lg capitalize">{trip_summary.travelers}</p>
+                                <p className="text-sm opacity-80">Tahmini Bütçe</p>
+                                <p className="font-bold text-lg">{trip_summary.total_estimated_cost}</p>
                             </div>
                         </div>
-                        
-                        <div className="flex items-center gap-3">
-                            <DollarSign className="w-8 h-8 text-green-500" />
+
+                        <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 flex items-center gap-3">
+                            <Cloud className="w-8 h-8" />
                             <div>
-                                <p className="text-sm text-gray-500">Примерная стоимость</p>
-                                <p className="font-semibold text-lg">{trip_summary.total_estimated_cost}</p>
+                                <p className="text-sm opacity-80">En İyi Sezon</p>
+                                <p className="font-bold text-lg">{trip_summary.best_season}</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-6 p-4 bg-blue-50 rounded-lg flex items-start gap-3">
-                        <Cloud className="w-6 h-6 text-blue-500 flex-shrink-0 mt-1" />
-                        <div>
-                            <p className="font-semibold text-blue-900">Лучший сезон</p>
-                            <p className="text-blue-700">{trip_summary.best_season}</p>
-                            <p className="text-sm text-blue-600 mt-1">{trip_summary.weather_forecast}</p>
+                    {/* Save Button */}
+                    {user && (
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setShowSaveModal(true)}
+                            className="mt-6 px-6 py-3 bg-white text-purple-600 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                        >
+                            <Heart className="w-5 h-5" />
+                            Trip'i Kaydet
+                        </motion.button>
+                    )}
+                </motion.div>
+
+                {/* Hava Durumu */}
+                {trip_summary.weather_forecast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="bg-gradient-to-r from-blue-400 to-cyan-400 rounded-2xl p-6 mb-8 text-white shadow-lg"
+                    >
+                        <div className="flex items-center gap-3 mb-2">
+                            <Cloud className="w-6 h-6" />
+                            <h3 className="text-xl font-bold">Hava Durumu Tahmini</h3>
                         </div>
-                    </div>
-                </div>
+                        <p className="text-lg opacity-90">{trip_summary.weather_forecast}</p>
+                    </motion.div>
+                )}
 
-                {/* Daily Itinerary */}
-                <div className="space-y-6 mb-8">
-                    <h2 className="text-3xl font-bold text-gray-800 mb-4">📅 Ежедневный маршрут</h2>
-                    
-                    {daily_itinerary.map((day: any) => (
-                        <div key={day.day} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                            {/* Day Header */}
-                            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6">
-                                <h3 className="text-2xl font-bold">День {day.day} - {day.title}</h3>
-                                <p className="text-blue-100">{day.date}</p>
-                            </div>
-
-                            <div className="p-6 space-y-6">
-                                {/* Morning */}
-                                <div className="border-l-4 border-yellow-400 pl-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Coffee className="w-6 h-6 text-yellow-600" />
-                                        <h4 className="text-xl font-semibold text-gray-800">Утро ({day.morning.time})</h4>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {day.morning.activities.map((activity: any, idx: number) => (
-                                            <div key={idx} className="bg-yellow-50 rounded-lg p-4">
-                                                <h5 className="font-bold text-gray-800">{activity.name}</h5>
-                                                <p className="text-sm text-gray-600">{activity.type} • {activity.duration} • {activity.cost}</p>
-                                                <p className="text-gray-700 mt-2">{activity.description}</p>
-                                                <p className="text-sm text-gray-500 mt-1">📍 {activity.address}</p>
-                                                {activity.tips && (
-                                                    <p className="text-sm text-blue-600 mt-2">💡 {activity.tips}</p>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                {/* Günlük Program - Accordion */}
+                {daily_itinerary.map((day: any, dayIndex: number) => (
+                    <Accordion
+                        key={dayIndex}
+                        title={`${day.day}. Gün: ${day.title || 'Program'}`}
+                        icon={<Calendar className="w-6 h-6 text-blue-500" />}
+                        defaultOpen={dayIndex === 0}
+                    >
+                        <div className="space-y-4">
+                            {/* Sabah */}
+                            {day.morning && day.morning.activities && day.morning.activities.length > 0 && (
+                                <div className="bg-yellow-50 rounded-xl p-4">
+                                    <h4 className="font-bold text-lg text-yellow-700 mb-3 flex items-center gap-2">
+                                        <Coffee className="w-5 h-5" />
+                                        Sabah ({day.morning.time})
+                                    </h4>
+                                    {day.morning.activities.map((activity: any, idx: number) => (
+                                        <div key={idx} className="bg-white rounded-lg p-3 mb-2">
+                                            <p className="font-semibold text-gray-800">{activity.name}</p>
+                                            <p className="text-sm text-gray-600">{activity.duration} • {activity.cost}</p>
+                                            <p className="text-sm text-gray-500 mt-1">📍 {activity.address}</p>
+                                        </div>
+                                    ))}
                                 </div>
+                            )}
 
-                                {/* Lunch */}
-                                <div className="border-l-4 border-orange-400 pl-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <UtensilsCrossed className="w-6 h-6 text-orange-600" />
-                                        <h4 className="text-xl font-semibold text-gray-800">Обед ({day.lunch.time})</h4>
-                                    </div>
-                                    <div className="bg-orange-50 rounded-lg p-4">
-                                        <h5 className="font-bold text-gray-800">{day.lunch.restaurant.name}</h5>
+                            {/* Öğle */}
+                            {day.lunch && day.lunch.restaurant && (
+                                <div className="bg-orange-50 rounded-xl p-4">
+                                    <h4 className="font-bold text-lg text-orange-700 mb-3 flex items-center gap-2">
+                                        <UtensilsCrossed className="w-5 h-5" />
+                                        Öğle Yemeği ({day.lunch.time})
+                                    </h4>
+                                    <div className="bg-white rounded-lg p-3">
+                                        <p className="font-semibold text-gray-800">{day.lunch.restaurant.name}</p>
                                         <p className="text-sm text-gray-600">{day.lunch.restaurant.cuisine} • {day.lunch.restaurant.average_cost}</p>
-                                        {day.lunch.restaurant.description && (
-                                            <p className="text-gray-700 mt-2">{day.lunch.restaurant.description}</p>
-                                        )}
-                                        {day.lunch.restaurant.recommended_dishes && (
-                                            <p className="text-sm text-green-600 mt-2">
-                                                🍽️ Рекомендуемые блюда: {day.lunch.restaurant.recommended_dishes.join(", ")}
-                                            </p>
-                                        )}
                                         <p className="text-sm text-gray-500 mt-1">📍 {day.lunch.restaurant.address}</p>
                                     </div>
                                 </div>
+                            )}
 
-                                {/* Afternoon */}
-                                <div className="border-l-4 border-blue-400 pl-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Sun className="w-6 h-6 text-blue-600" />
-                                        <h4 className="text-xl font-semibold text-gray-800">День ({day.afternoon.time})</h4>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {day.afternoon.activities.map((activity: any, idx: number) => (
-                                            <div key={idx} className="bg-blue-50 rounded-lg p-4">
-                                                <h5 className="font-bold text-gray-800">{activity.name}</h5>
-                                                <p className="text-sm text-gray-600">{activity.type} • {activity.duration} • {activity.cost}</p>
-                                                <p className="text-gray-700 mt-2">{activity.description}</p>
-                                                <p className="text-sm text-gray-500 mt-1">📍 {activity.address}</p>
-                                                {activity.tips && (
-                                                    <p className="text-sm text-blue-600 mt-2">💡 {activity.tips}</p>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                            {/* Öğleden Sonra */}
+                            {day.afternoon && day.afternoon.activities && day.afternoon.activities.length > 0 && (
+                                <div className="bg-blue-50 rounded-xl p-4">
+                                    <h4 className="font-bold text-lg text-blue-700 mb-3 flex items-center gap-2">
+                                        <Sun className="w-5 h-5" />
+                                        Öğleden Sonra ({day.afternoon.time})
+                                    </h4>
+                                    {day.afternoon.activities.map((activity: any, idx: number) => (
+                                        <div key={idx} className="bg-white rounded-lg p-3 mb-2">
+                                            <p className="font-semibold text-gray-800">{activity.name}</p>
+                                            <p className="text-sm text-gray-600">{activity.duration} • {activity.cost}</p>
+                                            <p className="text-sm text-gray-500 mt-1">📍 {activity.address}</p>
+                                        </div>
+                                    ))}
                                 </div>
+                            )}
 
-                                {/* Evening */}
-                                <div className="border-l-4 border-purple-400 pl-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Moon className="w-6 h-6 text-purple-600" />
-                                        <h4 className="text-xl font-semibold text-gray-800">Вечер ({day.evening.time})</h4>
-                                    </div>
-                                    <div className="bg-purple-50 rounded-lg p-4 mb-3">
-                                        <h5 className="font-bold text-gray-800">{day.evening.dinner.name}</h5>
+                            {/* Akşam */}
+                            {day.evening && day.evening.dinner && (
+                                <div className="bg-purple-50 rounded-xl p-4">
+                                    <h4 className="font-bold text-lg text-purple-700 mb-3 flex items-center gap-2">
+                                        <Moon className="w-5 h-5" />
+                                        Akşam ({day.evening.time})
+                                    </h4>
+                                    <div className="bg-white rounded-lg p-3">
+                                        <p className="font-semibold text-gray-800">{day.evening.dinner.name}</p>
                                         <p className="text-sm text-gray-600">{day.evening.dinner.cuisine} • {day.evening.dinner.average_cost}</p>
-                                        {day.evening.dinner.atmosphere && (
-                                            <p className="text-gray-700 mt-2">🌟 {day.evening.dinner.atmosphere}</p>
-                                        )}
-                                        {day.evening.dinner.recommended_dishes && (
-                                            <p className="text-sm text-green-600 mt-2">
-                                                🍽️ Рекомендуемые блюда: {day.evening.dinner.recommended_dishes.join(", ")}
-                                            </p>
-                                        )}
                                         <p className="text-sm text-gray-500 mt-1">📍 {day.evening.dinner.address}</p>
                                     </div>
-                                    {day.evening.night_activities.length > 0 && (
-                                        <div className="bg-purple-50 rounded-lg p-4">
-                                            <p className="font-semibold text-gray-800 mb-2">Ночные развлечения:</p>
-                                            <ul className="list-disc list-inside space-y-1">
-                                                {day.evening.night_activities.map((activity: string, idx: number) => (
-                                                    <li key={idx} className="text-gray-700">{activity}</li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
                                 </div>
+                            )}
 
-                                {/* Daily Tips */}
-                                <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Info className="w-5 h-5 text-green-600" />
-                                        <h4 className="font-semibold text-gray-800">Советы на день</h4>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                        <div>
-                                            <p className="text-gray-600"><span className="font-semibold">Погода:</span> {day.daily_tips.weather}</p>
-                                            <p className="text-gray-600 mt-1"><span className="font-semibold">Одежда:</span> {day.daily_tips.clothing}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-gray-600"><span className="font-semibold">Бюджет на день:</span> {day.daily_tips.estimated_daily_budget}</p>
-                                            <p className="text-gray-600 mt-1"><span className="font-semibold">Транспорт:</span> {day.transportation.getting_around}</p>
-                                        </div>
-                                    </div>
-                                    {day.daily_tips.important_notes && (
-                                        <p className="text-orange-600 mt-3">⚠️ {day.daily_tips.important_notes}</p>
-                                    )}
+                            {/* Günlük Bütçe */}
+                            {day.daily_tips && day.daily_tips.estimated_daily_budget && (
+                                <div className="bg-green-50 rounded-lg p-3">
+                                    <p className="text-sm font-semibold text-green-700">
+                                        💰 Günlük Tahmini Bütçe: {day.daily_tips.estimated_daily_budget}
+                                    </p>
                                 </div>
-                            </div>
+                            )}
                         </div>
-                    ))}
-                </div>
+                    </Accordion>
+                ))}
 
-                {/* Accommodation Suggestions */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                    <div className="flex items-center gap-3 mb-6">
-                        <Hotel className="w-8 h-8 text-blue-600" />
-                        <h2 className="text-3xl font-bold text-gray-800">🏨 Рекомендации по размещению</h2>
-                    </div>
+                {/* Konaklama - Accordion */}
+                <Accordion 
+                    title="🏨 Konaklama Önerileri" 
+                    icon={<Hotel className="w-6 h-6 text-purple-500" />}
+                >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {accommodation_suggestions.map((acc: any, idx: number) => (
-                            <div key={idx} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                <h3 className="font-bold text-lg text-gray-800">{acc.name}</h3>
-                                <p className="text-sm text-gray-500">{acc.type} • {acc.location}</p>
-                                <p className="text-green-600 font-semibold mt-2">{acc.price_range}</p>
-                                <p className="text-gray-700 mt-2">{acc.why_recommended}</p>
+                            <div key={idx} className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-purple-100">
+                                <h4 className="font-bold text-lg text-gray-800 mb-2">{acc.name}</h4>
+                                <p className="text-sm text-gray-600 mb-2 flex items-center gap-2">
+                                    <MapPin className="w-4 h-4" />
+                                    {acc.location}
+                                </p>
+                                <p className="font-bold text-green-600 text-lg mb-2">{acc.price_range}</p>
+                                <p className="text-sm text-gray-700">{acc.why_recommended || acc.description}</p>
                             </div>
                         ))}
                     </div>
-                </div>
+                </Accordion>
 
-                {/* General Tips */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                    <div className="flex items-center gap-3 mb-6">
-                        <AlertCircle className="w-8 h-8 text-orange-600" />
-                        <h2 className="text-3xl font-bold text-gray-800">💡 Общие советы</h2>
-                    </div>
+                {/* Genel İpuçları - Accordion */}
+                <Accordion 
+                    title="💡 Genel İpuçları" 
+                    icon={<AlertCircle className="w-6 h-6 text-yellow-500" />}
+                >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h3 className="font-semibold text-gray-800 mb-2">Местные обычаи</h3>
-                            <p className="text-gray-700">{general_tips.local_customs}</p>
+                        <div className="bg-blue-50 rounded-xl p-5">
+                            <h4 className="font-bold text-lg text-blue-600 mb-3">🏛️ Yerel Gelenekler</h4>
+                            <p className="text-gray-700 text-sm">{general_tips.local_customs}</p>
                         </div>
-                        <div>
-                            <h3 className="font-semibold text-gray-800 mb-2">Безопасность</h3>
-                            <p className="text-gray-700">{general_tips.safety}</p>
+
+                        <div className="bg-green-50 rounded-xl p-5">
+                            <h4 className="font-bold text-lg text-green-600 mb-3">🛡️ Güvenlik</h4>
+                            <p className="text-gray-700 text-sm">{general_tips.safety}</p>
                         </div>
-                        <div>
-                            <h3 className="font-semibold text-gray-800 mb-2">Деньги</h3>
-                            <p className="text-gray-700">{general_tips.money}</p>
+
+                        <div className="bg-yellow-50 rounded-xl p-5">
+                            <h4 className="font-bold text-lg text-yellow-600 mb-3">💵 Para ve Ödeme</h4>
+                            <p className="text-gray-700 text-sm">{general_tips.money}</p>
                         </div>
-                        <div className="flex items-start gap-2">
-                            <Phone className="w-5 h-5 text-red-500 flex-shrink-0 mt-1" />
-                            <div>
-                                <h3 className="font-semibold text-gray-800 mb-2">Экстренные контакты</h3>
-                                <p className="text-gray-700">{general_tips.emergency_contacts}</p>
-                            </div>
+
+                        <div className="bg-red-50 rounded-xl p-5">
+                            <h4 className="font-bold text-lg text-red-600 mb-3 flex items-center gap-2">
+                                <Phone className="w-5 h-5" />
+                                Acil Durum İletişim
+                            </h4>
+                            <p className="text-gray-700 text-sm">{general_tips.emergency_contacts}</p>
                         </div>
                     </div>
-                    
-                    {general_tips.useful_phrases.length > 0 && (
-                        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                            <div className="flex items-center gap-2 mb-3">
-                                <MessageSquare className="w-6 h-6 text-blue-600" />
-                                <h3 className="font-semibold text-gray-800">Полезные фразы</h3>
-                            </div>
+
+                    {general_tips.useful_phrases && general_tips.useful_phrases.length > 0 && (
+                        <div className="mt-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-5">
+                            <h4 className="font-bold text-lg text-purple-600 mb-3 flex items-center gap-2">
+                                <MessageSquare className="w-5 h-5" />
+                                Faydalı İfadeler
+                            </h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 {general_tips.useful_phrases.map((phrase: string, idx: number) => (
-                                    <p key={idx} className="text-sm text-gray-700">• {phrase}</p>
+                                    <div key={idx} className="bg-white rounded-lg px-3 py-2 text-sm">
+                                        {phrase}
+                                    </div>
                                 ))}
                             </div>
                         </div>
                     )}
-                </div>
+                </Accordion>
 
-                {/* Packing List */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                    <div className="flex items-center gap-3 mb-6">
-                        <Package className="w-8 h-8 text-purple-600" />
-                        <h2 className="text-3xl font-bold text-gray-800">🎒 Что взять с собой</h2>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {packing_list.map((item: string, idx: number) => (
-                            <div key={idx} className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
-                                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                                <p className="text-gray-700">{item}</p>
+                {/* Bavul Listesi - Accordion */}
+                <Accordion 
+                    title="🎒 Bavul Hazırlık Listesi" 
+                    icon={<Package className="w-6 h-6 text-pink-500" />}
+                >
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {packing_list.map((item: string, index: number) => (
+                            <div
+                                key={index}
+                                className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg p-3 border-2 border-pink-100 text-center"
+                            >
+                                <p className="text-sm font-semibold text-gray-700">{item}</p>
                             </div>
                         ))}
                     </div>
-                </div>
+                </Accordion>
+
+                {/* İnteraktif Harita */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="bg-white rounded-2xl shadow-lg p-6 mt-8"
+                >
+                    <div className="flex items-center gap-3 mb-4">
+                        <Map className="w-6 h-6 text-blue-500" />
+                        <h3 className="text-2xl font-bold text-gray-800">📍 Rota Haritası</h3>
+                        <span className="ml-auto text-sm text-gray-500">
+                            Kırmızı pinler ziyaret noktalarını gösteriyor
+                        </span>
+                    </div>
+                    <div className="h-96 rounded-xl overflow-hidden border-2 border-gray-200">
+                        <TripMap 
+                            cityName={currentTripFormData?.city || trip_summary.destination}
+                            locations={mapLocations}
+                        />
+                    </div>
+                </motion.div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-4 mt-8">
-                    {user && token && currentTripId && (
-                        <button
-                            onClick={() => setShowSaveModal(true)}
-                            className="flex-1 bg-gradient-to-r from-pink-500 to-red-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-pink-600 hover:to-red-600 transition-all shadow-lg flex items-center justify-center gap-2"
-                        >
-                            <Heart className="w-5 h-5" />
-                            Favorilere Kaydet
-                        </button>
-                    )}
+                <div className="flex gap-4 mt-8 mb-8">
                     <button
                         onClick={() => navigate("/")}
                         className="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-gray-600 hover:to-gray-700 transition-all shadow-lg"
                     >
-                        Создать новый план
+                        Yeni Plan Oluştur
                     </button>
                     <button
                         onClick={() => window.print()}
                         className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg"
                     >
-                        Печать / Сохранить PDF
+                        Yazdır / PDF Kaydet
                     </button>
                 </div>
             </div>

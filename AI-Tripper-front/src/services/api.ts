@@ -494,12 +494,12 @@ export type DetailedTripItinerary = {
         useful_phrases: string[];
     };
     packing_list: string[];
+    country_flag?: string; // REST Countries API'den gelen bayrak URL'i
 }
 
 export type DetailedTripResponse = {
     success: boolean;
     itinerary: DetailedTripItinerary;
-    trip_id: number;
     message: string;
 }
 
@@ -562,23 +562,39 @@ export type SavedTripResponse = {
 }
 
 /**
- * Trip'i favorilere kaydet (is_saved = true) ve isim ver
+ * Trip'i favorilere kaydet - Yeni trip oluşturur (POST)
+ * Artık sadece kullanıcı "Kaydet" butonuna basınca veritabanına ekleniyor
  */
 export async function saveTripToFavorites(
-    tripId: number,
+    tripPlan: DetailedTripItinerary,
     name: string,
+    city: string,
+    days: number,
+    travelers: string,
+    interests: string[],
+    budget: string,
+    transport: string,
     token: string
 ): Promise<SavedTripResponse> {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/routes/saved/${tripId}`, {
-            method: "PUT",
+        const response = await fetch(`${API_BASE_URL}/api/routes/saved`, {
+            method: "POST",
             headers: {
                 "Authorization": `Bearer ${token}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
+                city: city,
+                country: tripPlan.trip_summary?.destination || "",
+                duration_days: days,
+                travelers: travelers,
+                interests: interests,
+                budget: budget,
+                transport: transport,
+                trip_plan: tripPlan,
                 is_saved: true,
                 name: name,
+                mode: "walk" // deprecated field
             }),
         });
 
@@ -738,5 +754,38 @@ export async function markMessageAsRead(messageId: number, token: string): Promi
     } catch (error) {
         if (error instanceof ApiError) throw error;
         throw new ApiError("Network error marking message as read", undefined, error);
+    }
+}
+
+// ============= DESTINATIONS API =============
+
+export type Destination = {
+    name: string;
+    country: string;
+}
+
+export type DestinationsResponse = {
+    success: boolean;
+    destinations: Destination[];
+}
+
+/**
+ * Popüler şehir ve ülke listesini getir (autocomplete için)
+ */
+export async function getPopularDestinations(): Promise<Destination[]> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/destinations`, {
+            method: "GET",
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to get destinations", response.status);
+        }
+
+        const data: DestinationsResponse = await response.json();
+        return data.destinations;
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error getting destinations", undefined, error);
     }
 }

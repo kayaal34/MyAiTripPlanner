@@ -12,6 +12,60 @@ load_dotenv()
 # Sadece gerçek verilerle plan oluşturulacak
 # =====================================================================
 
+async def get_country_context(city: str) -> str:
+    """REST Countries API'den ülke bilgilerini al ve LLM için context oluştur"""
+    try:
+        # Şehir isminden ülke ismini tahmin et (basit mapping)
+        city_to_country = {
+            "paris": "france", "istanbul": "turkey", "roma": "italy", "rome": "italy",
+            "barselona": "spain", "barcelona": "spain", "londra": "united kingdom", "london": "united kingdom",
+            "amsterdam": "netherlands", "berlin": "germany", "prag": "czechia", "prague": "czechia",
+            "viyana": "austria", "vienna": "austria", "budapeşte": "hungary", "budapest": "hungary",
+            "atina": "greece", "athens": "greece", "dubai": "united arab emirates",
+            "tokyo": "japan", "new york": "united states", "bangkok": "thailand",
+            "singapur": "singapore", "singapore": "singapore", "sydney": "australia",
+            "lizbon": "portugal", "lisbon": "portugal", "madrid": "spain", "münih": "germany", "munich": "germany"
+        }
+        
+        country_name = city_to_country.get(city.lower(), "")
+        if not country_name:
+            return ""
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://restcountries.com/v3.1/name/{country_name}?fullText=false",
+                timeout=5.0
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 0:
+                    country = data[0]
+                    
+                    languages = ", ".join(list(country.get("languages", {}).values())[:3])
+                    currencies = ", ".join(list(country.get("currencies", {}).keys())[:2])
+                    timezone = country.get("timezones", [""])[0]
+                    
+                    context = f"""
+🌍 ÜLKE BİLGİLERİ ({country.get('name', {}).get('common', '')}):  
+- Başkent: {country.get('capital', [''])[0]}
+- Diller: {languages}
+- Para Birimi: {currencies}
+- Saat Dilimi: {timezone}
+- Bölge: {country.get('region', '')} - {country.get('subregion', '')}
+
+💡 BU BİLGİLERİ KULLANARAK:
+- Para birimi ile gerçekçi fiyatlar ver
+- Yerel dilde teşekkür/selamlaşma ifadeleri ekle  
+- Saat dilimi farkını belirt (Türkiye ile karşılaştır)
+- Kültürel özellikler hakkında ipuçları ver
+                    """
+                    return context
+    except Exception as e:
+        print(f"⚠️ Ülke bilgisi alınamadı: {e}")
+    
+    return ""
+
 async def generate_detailed_trip_itinerary(trip_data: dict):
     """
     PRODUCTION-READY: Kullanıcının girdiği verilere göre GÜN GÜN detaylı tatil planı oluşturur.
@@ -22,6 +76,7 @@ async def generate_detailed_trip_itinerary(trip_data: dict):
     ✅ Temperature: 0.6 (JSON format uyumu + gerçek yerler)
     ✅ Kısa açıklamalar (max 80 karakter - JSON parse hatasını önler)
     ✅ Kişiselleştirme (travelers, budget, interests)
+    ✅ REST Countries API entegrasyonu (para birimi, dil, saat dilimi)
     """
     
     api_key = os.getenv("GOOGLE_API_KEY")
@@ -40,6 +95,9 @@ async def generate_detailed_trip_itinerary(trip_data: dict):
         transport = trip_data.get('transport', 'yuruyerek')
         budget = trip_data.get('budget', 'orta')
         start_date = trip_data.get('start_date', '')
+        
+        # Ülke bilgilerini al (REST Countries API)
+        country_context, country_flag = await get_country_context(city)
         
         interests_text = ", ".join(interests) if interests else "genel turizm"
         
@@ -60,9 +118,11 @@ async def generate_detailed_trip_itinerary(trip_data: dict):
         }
         traveler_context = traveler_guides.get(travelers.lower(), traveler_guides["yalniz"])
         
-        # Profesyonel Rehber Prompt (Spesifik Mekanlar için optimize edildi)
+        # Profesyonel Rehber Prompt (REST Countries API bilgileriyle zenginleştirildi)
         prompt = f"""
 Sen {city} şehrinin en prestijli turist rehberisin. Gerçek mekanlar öner.
+
+{country_context}
 
 Müşteri: {travelers}, Bütçe: {budget_description}, İlgi: {interests_text}, Ulaşım: {transport}, {days} gün.
 
@@ -230,6 +290,11 @@ KRİTİK:
         # JSON parse et (Gemini direkt JSON döndürür)
         try:
             itinerary = json.loads(ai_text)
+            
+            # Bayrak URL'ini ekle
+            if country_flag:
+                itinerary["country_flag"] = country_flag
+            
             print(f"✅ {days} günlük production-ready plan oluşturuldu: {city}")
             print(f"   - Travelers: {travelers}")
             print(f"   - Budget: {budget}")

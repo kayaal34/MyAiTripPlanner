@@ -16,7 +16,14 @@ interface TripState {
     
     // Yeni AI Trip Planner
     currentTripPlan: DetailedTripItinerary | null;
-    currentTripId: number | null;
+    currentTripFormData: {
+        city: string;
+        days: number;
+        travelers: string;
+        interests: string[];
+        budget: string;
+        transport: string;
+    } | null;
 
     // Loading/Error durumları
     isLoading: boolean;
@@ -30,7 +37,7 @@ interface TripState {
     setPlaces: (places: Place[]) => void;
     setRoute: (route: RouteInfo | null) => void;
     setCurrentTripPlan: (plan: DetailedTripItinerary | null) => void;
-    setCurrentTripId: (tripId: number | null) => void;
+    setCurrentTripFormData: (data: TripState['currentTripFormData']) => void;
     setIsLoading: (isLoading: boolean) => void;
     setError: (error: string | null) => void;
     resetTrip: () => void;
@@ -44,8 +51,8 @@ const initialState = {
     mode: "walk" as TravelMode,
     places: [],
     route: null,
-    currentTripId: null,
     currentTripPlan: null,
+    currentTripFormData: null,
     isLoading: false,
     error: null,
 };
@@ -62,8 +69,8 @@ export const useTripStore = create<TripState>((set) => ({
     setMode: (mode) => set({ mode }),
     setPlaces: (places) => set({ places }),
     setRoute: (route) => set({ route }),
-    setCurrentTripId: (tripId) => set({ currentTripId: tripId }),
     setCurrentTripPlan: (plan) => set({ currentTripPlan: plan }),
+    setCurrentTripFormData: (data) => set({ currentTripFormData: data }),
     setIsLoading: (isLoading) => set({ isLoading }),
     setError: (error) => set({ error }),
 

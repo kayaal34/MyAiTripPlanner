@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { LogIn, User, Settings } from "lucide-react";
+import { LogIn, User, Settings, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 
@@ -61,13 +61,6 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                     className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-[15px]"
                 >
                     Tatil Şehirleri
-                </button>
-
-                <button
-                    onClick={() => navigate("/")}
-                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-[15px]"
-                >
-                    Blog
                 </button>
 
                 {/* Kurumsal Dropdown */}
@@ -142,6 +135,16 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                                     >
                                         <User className="w-4 h-4" />
                                         Hesabım
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            navigate("/saved-trips");
+                                            setShowUserDropdown(false);
+                                        }}
+                                        className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all border-t border-gray-100 font-medium flex items-center gap-3 text-[15px]"
+                                    >
+                                        <Heart className="w-4 h-4" />
+                                        Kayıtlı Rotalarım
                                     </button>
                                     <button
                                         onClick={() => {

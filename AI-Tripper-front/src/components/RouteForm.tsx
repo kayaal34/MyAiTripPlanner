@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { createDetailedTripPlan } from "../services/api";
+import { createDetailedTripPlan, getPopularDestinations, type Destination } from "../services/api";
 import { useAuthStore } from "../store/useAuthStore";
 import { useTripStore } from "../store/useTripStore";
+import LoadingModal from "./LoadingModal";
 
 // Rusça -> İngilizce çeviriler (Backend'e gönderilecek)
 const TRAVELERS_MAP: Record<string, string> = {
@@ -31,7 +32,7 @@ export default function RouteForm() {
     const navigate = useNavigate();
     const { token } = useAuthStore();
     const setCurrentTripPlan = useTripStore((state) => state.setCurrentTripPlan);
-    const setCurrentTripId = useTripStore((state) => state.setCurrentTripId);
+    const setCurrentTripFormData = useTripStore((state) => state.setCurrentTripFormData);
     const [city, setCity] = useState("");
     const [days, setDays] = useState("3");
     const [travelers, setTravelers] = useState("");
@@ -39,6 +40,56 @@ export default function RouteForm() {
     const [transport, setTransport] = useState("");
     const [loadingMessage, setLoadingMessage] = useState("");
     const [normalLoading, setNormalLoading] = useState(false);
+
+    // Autocomplete states
+    const [destinations, setDestinations] = useState<Destination[]>([]);
+    const [filteredDestinations, setFilteredDestinations] = useState<Destination[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
+    // Load destinations on component mount
+    useEffect(() => {
+        const loadDestinations = async () => {
+            try {
+                console.log("🔄 Şehir listesi yükleniyor...");
+                const data = await getPopularDestinations();
+                console.log("✅ Şehir listesi yüklendi:", data.length, "şehir");
+                setDestinations(data);
+            } catch (error) {
+                console.error("❌ Şehir listesi yüklenemedi:", error);
+            }
+        };
+        loadDestinations();
+    }, []);
+
+    // Filter destinations when city input changes
+    useEffect(() => {
+        if (city.trim().length > 0) {
+            const searchTerm = city
+                .toLowerCase()
+                .replace(/i̇/g, 'i')  // Türkçe İ düzeltmesi
+                .replace(/ı/g, 'i');  // Türkçe ı -> i
+            
+            const filtered = destinations.filter(dest => {
+                const destName = dest.name
+                    .toLowerCase()
+                    .replace(/i̇/g, 'i')
+                    .replace(/ı/g, 'i');
+                const destCountry = dest.country
+                    .toLowerCase()
+                    .replace(/i̇/g, 'i')
+                    .replace(/ı/g, 'i');
+                
+                return destName.includes(searchTerm) || destCountry.includes(searchTerm);
+            });
+            
+            console.log(`🔍 "${city}" için ${filtered.length} sonuç bulundu`);
+            setFilteredDestinations(filtered.slice(0, 5)); // Show max 5 suggestions
+            setShowSuggestions(filtered.length > 0);
+        } else {
+            setFilteredDestinations([]);
+            setShowSuggestions(false);
+        }
+    }, [city, destinations]);
 
     const interestOptions = [
         "Культура",
@@ -123,7 +174,14 @@ export default function RouteForm() {
 
             // Store'a kaydet ve sonuç sayfasına yönlendir
             setCurrentTripPlan(response.itinerary);
-            setCurrentTripId(response.trip_id);
+            setCurrentTripFormData({
+                city,
+                days: parseInt(days),
+                travelers: travelersValue,
+                interests: interestsValues,
+                transport: transportValue,
+                budget: "orta"
+            });
             navigate("/trip-plan");
 
         } catch (error: any) {
@@ -145,7 +203,7 @@ export default function RouteForm() {
             </h2>
 
             {/* Hedef */}
-            <div className="mb-8">
+            <div className="mb-8 relative">
                 <label className="block mb-3 text-sm font-semibold text-gray-700">
                     Направление
                 </label>
@@ -154,9 +212,31 @@ export default function RouteForm() {
                     placeholder="Введите название города или страны..."
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
+                    onFocus={() => city.trim().length > 0 && setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                     className="w-full border-2 border-gray-200 py-3.5 px-5 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300"
                     required
                 />
+                
+                {/* Autocomplete Suggestions */}
+                {showSuggestions && filteredDestinations.length > 0 && (
+                    <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                        {filteredDestinations.map((dest, index) => (
+                            <button
+                                key={index}
+                                type="button"
+                                onClick={() => {
+                                    setCity(`${dest.name}, ${dest.country}`);
+                                    setShowSuggestions(false);
+                                }}
+                                className="w-full text-left px-5 py-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+                            >
+                                <div className="font-semibold text-gray-800">{dest.name}</div>
+                                <div className="text-sm text-gray-500">{dest.country}</div>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Süre ve Kişi (Yan Yana) */}
@@ -259,23 +339,10 @@ export default function RouteForm() {
                         ⚠️ Plan oluşturmak için giriş yapmalısınız
                     </p>
                 )}
-                
-                {/* Yükleme Ekranı */}
-                {normalLoading && (
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border-2 border-blue-200 mt-4 text-center">
-                        <div className="flex items-center justify-center space-x-3 mb-3">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            <span className="text-lg font-semibold text-blue-700">{loadingMessage}</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
-                        </div>
-                        <p className="text-sm text-gray-600 mt-3">
-                            ⏱️ Bu işlem 10-20 saniye sürebilir...
-                        </p>
-                    </div>
-                )}
             </div>
+            
+            {/* Loading Modal */}
+            <LoadingModal isOpen={normalLoading} />
         </form>
     );
 }
