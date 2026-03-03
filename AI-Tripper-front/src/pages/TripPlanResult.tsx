@@ -1,8 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTripStore } from "../store/useTripStore";
 import Navbar from "../components/Navbar";
 import { MapPin, Calendar, Users, DollarSign, Cloud, Coffee, UtensilsCrossed, Sun, Moon, Info, Hotel, AlertCircle, Phone, MessageSquare, Package } from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Fix marker icon issue with Leaflet in Vite
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 export default function TripPlanResult() {
     const navigate = useNavigate();
@@ -15,6 +26,92 @@ export default function TripPlanResult() {
         }
     }, [currentTripPlan, navigate]);
 
+    // Tüm aktiviteleri haritada göstermek için topla
+    const allPlaces = useMemo(() => {
+        if (!currentTripPlan) return [];
+
+        const places: any[] = [];
+        let placeId = 0;
+
+        currentTripPlan.daily_itinerary.forEach((day) => {
+            // Morning activities
+            day.morning?.activities?.forEach((activity: any) => {
+                if (activity.coordinates?.lat && activity.coordinates?.lng) {
+                    places.push({
+                        id: `place-${placeId++}`,
+                        name: activity.name,
+                        lat: activity.coordinates.lat,
+                        lng: activity.coordinates.lng,
+                        address: activity.address || '',
+                        description: activity.description || '',
+                        day: day.day,
+                        timeSlot: `Sabah - ${day.morning.time}`,
+                        image: activity.image || 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&h=600&fit=crop'
+                    });
+                }
+            });
+
+            // Lunch restaurant
+            if (day.lunch?.restaurant?.coordinates?.lat && day.lunch?.restaurant?.coordinates?.lng) {
+                places.push({
+                    id: `place-${placeId++}`,
+                    name: day.lunch.restaurant.name,
+                    lat: day.lunch.restaurant.coordinates.lat,
+                    lng: day.lunch.restaurant.coordinates.lng,
+                    address: day.lunch.restaurant.address || '',
+                    description: day.lunch.restaurant.description || day.lunch.restaurant.cuisine || '',
+                    day: day.day,
+                    timeSlot: `Öğle Yemeği - ${day.lunch.time}`,
+                    image: day.lunch.restaurant.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop'
+                });
+            }
+
+            // Afternoon activities
+            day.afternoon?.activities?.forEach((activity: any) => {
+                if (activity.coordinates?.lat && activity.coordinates?.lng) {
+                    places.push({
+                        id: `place-${placeId++}`,
+                        name: activity.name,
+                        lat: activity.coordinates.lat,
+                        lng: activity.coordinates.lng,
+                        address: activity.address || '',
+                        description: activity.description || '',
+                        day: day.day,
+                        timeSlot: `Öğleden Sonra - ${day.afternoon.time}`,
+                        image: activity.image || 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&h=600&fit=crop'
+                    });
+                }
+            });
+
+            // Evening dinner
+            if (day.evening?.dinner?.coordinates?.lat && day.evening?.dinner?.coordinates?.lng) {
+                places.push({
+                    id: `place-${placeId++}`,
+                    name: day.evening.dinner.name,
+                    lat: day.evening.dinner.coordinates.lat,
+                    lng: day.evening.dinner.coordinates.lng,
+                    address: day.evening.dinner.address || '',
+                    description: day.evening.dinner.description || day.evening.dinner.cuisine || '',
+                    day: day.day,
+                    timeSlot: `Akşam Yemeği - ${day.evening.time}`,
+                    image: day.evening.dinner.image || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=600&fit=crop'
+                });
+            }
+        });
+
+        return places;
+    }, [currentTripPlan]);
+
+    // Harita merkezi (tüm yerlerin ortalaması)
+    const mapCenter = useMemo<[number, number]>(() => {
+        if (allPlaces.length === 0) return [41.0082, 28.9784]; // İstanbul default
+
+        const avgLat = allPlaces.reduce((sum, p) => sum + p.lat, 0) / allPlaces.length;
+        const avgLng = allPlaces.reduce((sum, p) => sum + p.lng, 0) / allPlaces.length;
+
+        return [avgLat, avgLng];
+    }, [allPlaces]);
+
     if (!currentTripPlan) {
         return null;
     }
@@ -24,14 +121,14 @@ export default function TripPlanResult() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
             <Navbar />
-            
+
             <div className="container mx-auto px-4 py-24">
                 {/* Trip Summary Header */}
                 <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
                     <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-6">
                         Ваш идеальный маршрут готов! 🎉
                     </h1>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div className="flex items-center gap-3">
                             <MapPin className="w-8 h-8 text-blue-500" />
@@ -40,7 +137,7 @@ export default function TripPlanResult() {
                                 <p className="font-semibold text-lg">{trip_summary.destination}</p>
                             </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-3">
                             <Calendar className="w-8 h-8 text-purple-500" />
                             <div>
@@ -48,7 +145,7 @@ export default function TripPlanResult() {
                                 <p className="font-semibold text-lg">{trip_summary.duration_days} дней</p>
                             </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-3">
                             <Users className="w-8 h-8 text-pink-500" />
                             <div>
@@ -56,7 +153,7 @@ export default function TripPlanResult() {
                                 <p className="font-semibold text-lg capitalize">{trip_summary.travelers}</p>
                             </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-3">
                             <DollarSign className="w-8 h-8 text-green-500" />
                             <div>
@@ -76,10 +173,108 @@ export default function TripPlanResult() {
                     </div>
                 </div>
 
+                {/* HARITA - Tüm Aktiviteler */}
+                {allPlaces.length > 0 && (
+                    <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+                        <h2 className="text-3xl font-bold text-gray-800 mb-4">🗺️ Маршрут на карте</h2>
+                        <div className="h-[500px] w-full rounded-xl overflow-hidden">
+                            <MapContainer
+                                center={mapCenter}
+                                zoom={13}
+                                className="h-full w-full"
+                                zoomControl={true}
+                                scrollWheelZoom={true}
+                            >
+                                <TileLayer
+                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                />
+
+                                {allPlaces.map((place, index) => (
+                                    <Marker
+                                        key={place.id || index}
+                                        position={[place.lat, place.lng]}
+                                    >
+                                        <Popup maxWidth={600} minWidth={450} className="custom-popup">
+                                            <div className="w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-lg">
+                                                {/* Görsel */}
+                                                <div className="relative w-full h-48 overflow-hidden">
+                                                    <img
+                                                        src={place.image || "https://images.unsplash.com/photo-1569949381669-ecf31ae8e613?w=800"}
+                                                        alt={place.name}
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.src = 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&h=600&fit=crop';
+                                                        }}
+                                                    />
+                                                    {place.day && (
+                                                        <div className="absolute top-3 left-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
+                                                            {place.day}. Gün
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* İçerik */}
+                                                <div className="p-4">
+                                                    <h3 className="text-lg font-bold text-gray-800 mb-2">
+                                                        {place.name}
+                                                    </h3>
+
+                                                    {place.timeSlot && (
+                                                        <div className="text-sm text-gray-600 mb-3">
+                                                            🕐 {place.timeSlot}
+                                                        </div>
+                                                    )}
+
+                                                    {place.description && (
+                                                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                                                            {place.description}
+                                                        </p>
+                                                    )}
+
+                                                    {place.address && (
+                                                        <p className="text-xs text-gray-500 mb-4 line-clamp-1">
+                                                            📍 {place.address}
+                                                        </p>
+                                                    )}
+
+                                                    {/* Butonlar */}
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                const query = encodeURIComponent(`${place.name}, ${place.address || ''}`);
+                                                                const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
+                                                                window.open(url, "_blank");
+                                                            }}
+                                                            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-colors"
+                                                        >
+                                                            Google Maps
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                const url = `https://yandex.com/maps/?pt=${place.lng},${place.lat}&z=15`;
+                                                                window.open(url, "_blank");
+                                                            }}
+                                                            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-colors"
+                                                        >
+                                                            Yandex Maps
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Popup>
+                                    </Marker>
+                                ))}
+                            </MapContainer>
+                        </div>
+                    </div>
+                )}
+
                 {/* Daily Itinerary */}
                 <div className="space-y-6 mb-8">
                     <h2 className="text-3xl font-bold text-gray-800 mb-4">📅 Ежедневный маршрут</h2>
-                    
+
                     {daily_itinerary.map((day) => (
                         <div key={day.day} className="bg-white rounded-2xl shadow-lg overflow-hidden">
                             {/* Day Header */}
@@ -253,7 +448,7 @@ export default function TripPlanResult() {
                             </div>
                         </div>
                     </div>
-                    
+
                     {general_tips.useful_phrases.length > 0 && (
                         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                             <div className="flex items-center gap-2 mb-3">

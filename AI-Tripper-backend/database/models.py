@@ -23,6 +23,9 @@ class User(Base):
     age_range = Column(String, nullable=True)  # "18-25", "26-35", "36-45", "46+"
     travel_style = Column(String, nullable=True)  # "rahat", "aktif", "luks", "butce"
     
+    # Subscription & Usage Limits
+    remaining_routes = Column(Integer, default=3, nullable=False)  # Free users: 3, Premium/Pro: -1 (unlimited)
+    
     # Relationships
     trips = relationship("Trip", back_populates="user", cascade="all, delete-orphan")
     favorites = relationship("FavoritePlace", back_populates="user", cascade="all, delete-orphan")
@@ -84,6 +87,37 @@ class FavoritePlace(Base):
     
     # Relationships
     user = relationship("User", back_populates="favorites")
+
+
+class Subscription(Base):
+    """Premium abonelik sistemi"""
+    __tablename__ = "subscriptions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    
+    # Stripe bilgileri
+    stripe_customer_id = Column(String, nullable=True, index=True)
+    stripe_subscription_id = Column(String, nullable=True, index=True)
+    
+    # Plan bilgileri
+    plan = Column(String, nullable=False, default="free")  # "free", "premium", "pro"
+    status = Column(String, nullable=False, default="active")  # "active", "canceled", "past_due"
+    
+    # Fiyatlandırma
+    amount = Column(Float, default=0.0)  # Aylık ücret
+    currency = Column(String, default="usd")
+    
+    # Tarihler
+    current_period_start = Column(DateTime, nullable=True)
+    current_period_end = Column(DateTime, nullable=True)
+    cancel_at_period_end = Column(Boolean, default=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", backref="subscription")
 
 
 class ContactMessage(Base):

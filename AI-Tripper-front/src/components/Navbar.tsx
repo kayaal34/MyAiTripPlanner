@@ -19,14 +19,13 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
         <motion.div
             initial={{ y: -100 }}
             animate={{ y: 0 }}
-            className={`fixed top-0 left-0 w-full flex items-center justify-between px-12 z-50 shadow-sm transition-all h-20 ${
-                transparent 
-                    ? "bg-white/90 backdrop-blur-xl" 
-                    : "bg-white/95 backdrop-blur-xl"
-            }`}
+            className={`fixed top-0 left-0 w-full flex items-center justify-between px-12 z-50 shadow-sm transition-all h-20 ${transparent
+                ? "bg-white/90 backdrop-blur-xl"
+                : "bg-white/95 backdrop-blur-xl"
+                }`}
         >
             {/* Logo - Left */}
-            <div 
+            <div
                 onClick={() => navigate("/")}
                 className="flex items-center gap-3 cursor-pointer group flex-shrink-0"
             >
@@ -63,8 +62,16 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                     Tatil Şehirleri
                 </button>
 
+                <button
+                    onClick={() => navigate("/pricing")}
+                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-[15px] flex items-center gap-1.5"
+                >
+                    <span className="text-yellow-500"></span>
+                    Premium
+                </button>
+
                 {/* Kurumsal Dropdown */}
-                <div 
+                <div
                     className="relative"
                     onMouseEnter={() => setShowKurumsalDropdown(true)}
                     onMouseLeave={() => setShowKurumsalDropdown(false)}
@@ -105,74 +112,95 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
             {/* Auth Section - Right */}
             <div className="flex items-center gap-4 flex-shrink-0">
                 {isAuthenticated && user ? (
-                    <div 
-                        className="relative"
-                        onMouseEnter={() => setShowUserDropdown(true)}
-                        onMouseLeave={() => setShowUserDropdown(false)}
-                    >
-                        <button className="px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 rounded-lg text-gray-700 font-medium transition-all flex items-center gap-2 border border-gray-200 text-[15px]">
-                            <User className="w-4 h-4" />
-                            {user.username}
-                            <svg className={`w-3.5 h-3.5 transition-transform ${showUserDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <>
+                        {/* Kredi/Rota Göstergesi */}
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm border ${user.remaining_routes === -1
+                            ? "bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200 text-yellow-700"
+                            : user.remaining_routes === 0
+                                ? "bg-red-50 border-red-200 text-red-600"
+                                : "bg-blue-50 border-blue-200 text-blue-700"
+                            }`}>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                             </svg>
-                        </button>
+                            {user.remaining_routes === -1 ? (
+                                <span>∞ Sınırsız</span>
+                            ) : user.remaining_routes === 0 ? (
+                                <span>0 Rota</span>
+                            ) : (
+                                <span>{user.remaining_routes} Rota</span>
+                            )}
+                        </div>
 
-                        {/* User Dropdown */}
-                        {showUserDropdown && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="absolute top-full right-0 pt-2 w-56"
-                            >
-                                <div className="bg-white/95 backdrop-blur-xl rounded-xl shadow-xl overflow-hidden border border-gray-100">
-                                    <button
-                                        onClick={() => {
-                                            navigate("/profile");
-                                            setShowUserDropdown(false);
-                                        }}
-                                        className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all font-medium flex items-center gap-3 text-[15px]"
-                                    >
-                                        <User className="w-4 h-4" />
-                                        Hesabım
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            navigate("/saved-trips");
-                                            setShowUserDropdown(false);
-                                        }}
-                                        className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all border-t border-gray-100 font-medium flex items-center gap-3 text-[15px]"
-                                    >
-                                        <Heart className="w-4 h-4" />
-                                        Kayıtlı Rotalarım
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            navigate("/profile");
-                                            setShowUserDropdown(false);
-                                        }}
-                                        className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all border-t border-gray-100 font-medium flex items-center gap-3 text-[15px]"
-                                    >
-                                        <Settings className="w-4 h-4" />
-                                        Hesap Ayarlarım
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            logout();
-                                            navigate("/");
-                                            setShowUserDropdown(false);
-                                        }}
-                                        className="w-full text-left px-5 py-3 hover:bg-red-50 text-gray-700 hover:text-red-600 transition-all border-t border-gray-100 font-medium flex items-center gap-3 text-[15px]"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                        </svg>
-                                        Çıkış Yap
-                                    </button>
-                                </div>
-                            </motion.div>
-                        )}
-                    </div>
+                        <div
+                            className="relative"
+                            onMouseEnter={() => setShowUserDropdown(true)}
+                            onMouseLeave={() => setShowUserDropdown(false)}
+                        >
+                            <button className="px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 rounded-lg text-gray-700 font-medium transition-all flex items-center gap-2 border border-gray-200 text-[15px]">
+                                <User className="w-4 h-4" />
+                                {user.username}
+                                <svg className={`w-3.5 h-3.5 transition-transform ${showUserDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {/* User Dropdown */}
+                            {showUserDropdown && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="absolute top-full right-0 pt-2 w-56"
+                                >
+                                    <div className="bg-white/95 backdrop-blur-xl rounded-xl shadow-xl overflow-hidden border border-gray-100">
+                                        <button
+                                            onClick={() => {
+                                                navigate("/profile");
+                                                setShowUserDropdown(false);
+                                            }}
+                                            className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all font-medium flex items-center gap-3 text-[15px]"
+                                        >
+                                            <User className="w-4 h-4" />
+                                            Hesabım
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                navigate("/saved-trips");
+                                                setShowUserDropdown(false);
+                                            }}
+                                            className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all border-t border-gray-100 font-medium flex items-center gap-3 text-[15px]"
+                                        >
+                                            <Heart className="w-4 h-4" />
+                                            Kayıtlı Rotalarım
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                navigate("/profile");
+                                                setShowUserDropdown(false);
+                                            }}
+                                            className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all border-t border-gray-100 font-medium flex items-center gap-3 text-[15px]"
+                                        >
+                                            <Settings className="w-4 h-4" />
+                                            Hesap Ayarlarım
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                logout();
+                                                navigate("/");
+                                                setShowUserDropdown(false);
+                                            }}
+                                            className="w-full text-left px-5 py-3 hover:bg-red-50 text-gray-700 hover:text-red-600 transition-all border-t border-gray-100 font-medium flex items-center gap-3 text-[15px]"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                            </svg>
+                                            Çıkış Yap
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
+                    </>
                 ) : onAuthClick ? (
                     <button
                         onClick={onAuthClick}

@@ -56,10 +56,9 @@ export default function MapView() {
             {/* Main container with flex */}
             <div className="flex h-full w-full gap-4">
                 {/* Map Container */}
-                <div 
-                    className={`transition-all duration-500 h-full rounded-2xl overflow-hidden ${
-                        selectedFamousPlace ? 'w-[calc(100%-500px)]' : 'w-full'
-                    }`}
+                <div
+                    className={`transition-all duration-500 h-full rounded-2xl overflow-hidden ${selectedFamousPlace ? 'w-[calc(100%-500px)]' : 'w-full'
+                        }`}
                 >
                     <MapContainer
                         center={center}
@@ -74,19 +73,80 @@ export default function MapView() {
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                         />
-                        
+
                         {/* User's trip places */}
                         {places.map((place, index) => (
                             <Marker
                                 key={place.id || index}
                                 position={[place.lat, place.lng]}
                             >
-                                <Popup>
-                                    <div className="text-center">
-                                        <strong>{place.name}</strong>
-                                        {place.address && (
-                                            <p className="text-xs text-slate-600 mt-1">{place.address}</p>
-                                        )}
+                                <Popup maxWidth={600} minWidth={450} className="custom-popup">
+                                    <div className="w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-lg">
+                                        {/* Görsel */}
+                                        <div className="relative w-full h-48 overflow-hidden">
+                                            <img
+                                                src={place.image || "https://images.unsplash.com/photo-1569949381669-ecf31ae8e613?w=800"}
+                                                alt={place.name}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.src = 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&h=600&fit=crop';
+                                                }}
+                                            />
+                                            {place.day && (
+                                                <div className="absolute top-3 left-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
+                                                    {place.day}. Gün
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* İçerik */}
+                                        <div className="p-4">
+                                            <h3 className="text-lg font-bold text-gray-800 mb-2">
+                                                {place.name}
+                                            </h3>
+
+                                            {place.timeSlot && (
+                                                <div className="text-sm text-gray-600 mb-3">
+                                                    🕐 {place.timeSlot}
+                                                </div>
+                                            )}
+
+                                            {place.description && (
+                                                <p className="text-sm text-gray-600 mb-4">
+                                                    {place.description}
+                                                </p>
+                                            )}
+
+                                            {place.address && (
+                                                <p className="text-xs text-gray-500 mb-4">
+                                                    📍 {place.address}
+                                                </p>
+                                            )}
+
+                                            {/* Butonlar */}
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        const query = encodeURIComponent(`${place.name}, ${place.address || ''}`);
+                                                        const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
+                                                        window.open(url, "_blank");
+                                                    }}
+                                                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-3 rounded-lg text-sm"
+                                                >
+                                                    Google Maps
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const url = `https://yandex.com/maps/?pt=${place.lng},${place.lat}&z=15`;
+                                                        window.open(url, "_blank");
+                                                    }}
+                                                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-3 rounded-lg text-sm"
+                                                >
+                                                    Yandex Maps
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </Popup>
                             </Marker>

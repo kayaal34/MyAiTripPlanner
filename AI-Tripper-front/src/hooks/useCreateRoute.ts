@@ -24,9 +24,11 @@ export function useCreateRoute() {
     const setRoute = useTripStore((state) => state.setRoute);
     const setIsLoading = useTripStore((state) => state.setIsLoading);
     const setError = useTripStore((state) => state.setError);
-    
-    // Auth store'dan token al
+
+    // Auth store'dan token ve user al
     const token = useAuthStore((state) => state.token);
+    const user = useAuthStore((state) => state.user);
+    const updateUser = useAuthStore((state) => state.updateUser);
 
     return useMutation<RouteResponse, ApiError, RouteRequest>({
         // Mutation function - API çağrısı
@@ -44,6 +46,14 @@ export function useCreateRoute() {
             setRoute(data.route);
             setIsLoading(false);
             setError(null);
+
+            // Kalan rota hakkını güncelle
+            if (data.remaining_routes !== undefined && user) {
+                updateUser({
+                    ...user,
+                    remaining_routes: data.remaining_routes
+                });
+            }
         },
 
         // Hata olursa

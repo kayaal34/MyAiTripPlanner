@@ -7,9 +7,10 @@ interface HeroProps {
 }
 
 export default function Hero({ onAuthClick }: HeroProps) {
-    const [bgImage, setBgImage] = useState<string>("");
+    // Statik yüksek kaliteli görsel
+    const [bgImage] = useState<string>("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=85");
     const [currentWord, setCurrentWord] = useState(0);
-    
+
     const words = ["Приключениях", "Гастрономии", "Культуре", "Природе", "Городах", "Море", "Горах"];
 
     // 🔥 Dinamik kelime değişimi
@@ -20,27 +21,9 @@ export default function Hero({ onAuthClick }: HeroProps) {
         return () => clearInterval(interval);
     }, []);
 
-    // 🔥 Unsplash'tan net fotoğraf çek
-    useEffect(() => {
-        const key = import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
-
-        fetch(
-            `https://api.unsplash.com/photos/random?query=travel,nature,city,landscape&orientation=landscape&client_id=${key}`
-        )
-            .then((res) => res.json())
-            .then((data) => {
-                if (data?.urls?.full) {
-                    setBgImage(data.urls.full); // en net çözünürlük
-                }
-            })
-            .catch(() => {
-                setBgImage("https://images.unsplash.com/photo-1507525428034-b723cf961d3e");
-            });
-    }, []);
-
     return (
         <div className="relative w-full h-[100vh] overflow-hidden">
-            
+
             {/* Navbar */}
             <Navbar onAuthClick={onAuthClick} transparent={true} />
 

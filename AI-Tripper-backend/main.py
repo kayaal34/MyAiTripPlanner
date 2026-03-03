@@ -2,11 +2,13 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+import httpx
+import os
 
 from services.llm_service import generate_detailed_trip_itinerary
 from database.database import engine, get_db
 from database import models
-from routes import auth, routes, favorites, history, contact
+from routes import auth, routes, favorites, history, contact, subscription
 from auth.security import get_current_active_user
 
 app = FastAPI(title="AI Tripper API", version="2.0.0")
@@ -14,12 +16,7 @@ app = FastAPI(title="AI Tripper API", version="2.0.0")
 # CORS ayarları
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175"
-    ],
+    allow_origins=["*"],  # Tüm origin'lere izin ver (development için)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,6 +28,16 @@ app.include_router(routes.router)
 app.include_router(favorites.router)
 app.include_router(history.router)
 app.include_router(contact.router)
+app.include_router(subscription.router)
+
+@app.get("/")
+async def root():
+    return {
+        "message": "AI Tripper API",
+        "version": "2.0.0",
+        "docs": "/docs",
+        "status": "running"
+    }
 
 class RouteRequest(BaseModel):
     city: str
@@ -48,6 +55,68 @@ class TripPlanRequest(BaseModel):
     budget: str = "orta"
     start_date: str = ""
 
+# Helper function: Unsplash'ten mekan görseli al
+async def get_place_image(place_name: str, city: str = "istanbul", place_type: str = "landmark") -> str:
+    """Unsplash API'den mekan görseli al, hata durumunda fallback URL döndür"""
+    
+    # Önce statik fallback'leri hazırla (şehir bazlı)
+    city_lower = city.lower()
+    if place_type == "restaurant":
+        # Restaurant için Türk mutfağı görselleri
+        fallback = "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&h=600&fit=crop"  # Turkish food
+    else:
+        # Şehir bazlı landmark görselleri
+        city_fallbacks = {
+            "istanbul": "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800&h=600&fit=crop",  # Istanbul
+            "ankara": "https://images.unsplash.com/photo-1570939274717-7eda259b50ed?w=800&h=600&fit=crop",  # Ankara
+            "antalya": "https://images.unsplash.com/photo-1605523666787-dcfca8b5db58?w=800&h=600&fit=crop",  # Antalya
+            "izmir": "https://images.unsplash.com/photo-1578070181910-f1e514afdd08?w=800&h=600&fit=crop",  # Izmir
+        }
+        fallback = city_fallbacks.get(city_lower, "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&h=600&fit=crop")
+    
+    try:
+        unsplash_access_key = os.getenv("UNSPLASH_ACCESS_KEY")
+        if not unsplash_access_key:
+            return fallback
+        
+        # Çok spesifik query oluştur
+        if place_type == "restaurant":
+            # Restaurant isimleri genelde alakasız sonuç veriyor, direkt fallback kullan
+            print(f"📍 Restaurant için statik görsel kullanılıyor: {place_name}")
+            return fallback
+        else:
+            # Landmark için şehir + ülke + mekan ismi
+            query = f"{place_name} {city_lower} turkey"
+        
+        print(f"🔍 Unsplash Query: {query}")
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://api.unsplash.com/search/photos",
+                params={
+                    "query": query,
+                    "per_page": 3,  # İlk 3 sonucu al, daha iyi seçenek olabilir
+                    "orientation": "landscape"
+                },
+                headers={"Authorization": f"Client-ID {unsplash_access_key}"},
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("results") and len(data["results"]) > 0:
+                    # İlk sonucu kullan (en alakalı olmalı)
+                    image_url = data["results"][0]["urls"]["regular"]
+                    print(f"✅ Görsel bulundu: {place_name}")
+                    return image_url
+                else:
+                    print(f"⚠️ Unsplash'ta sonuç bulunamadı: {place_name}")
+    except Exception as e:
+        print(f"⚠️ Unsplash API hatası ({place_name}): {e}")
+    
+    # Fallback: Şehir bazlı statik görsel
+    print(f"📸 Fallback görsel kullanılıyor: {place_name}")
+    return fallback
+
 # Debug middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -61,6 +130,13 @@ async def log_requests(request: Request, call_next):
 async def generate_route(data: RouteRequest, db: AsyncSession = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
     print(f"Received request: {data}")
     
+    # Check user's remaining routes
+    if current_user.remaining_routes == 0:
+        raise HTTPException(
+            status_code=403, 
+            detail="Ücretsiz rota hakkınız bitti. Premium'a geçin!"
+        )
+    
     places = await generate_places(
         city=data.city,
         interests=data.interests,
@@ -68,17 +144,32 @@ async def generate_route(data: RouteRequest, db: AsyncSession = Depends(get_db),
     )
     
     # Frontend'in beklediği format
-    formatted_places = [
-        {
+    formatted_places = []
+    for i, place in enumerate(places):
+        # Unsplash'ten gerçek görsel al (şehir bilgisi ile)
+        image_url = await get_place_image(
+            place["name"], 
+            city=data.city,
+            place_type="landmark"
+        )
+        
+        formatted_places.append({
             "id": str(i),
             "name": place["name"],
             "lat": float(place["lat"]),
             "lng": float(place["lng"]),
             "address": place.get("address", ""),
-            "description": place.get("description", "")
-        }
-        for i, place in enumerate(places)
-    ]
+            "description": place.get("description", ""),
+            # Modern popup için yeni alanlar
+            "image": image_url,
+            "day": 1,  # Tek günlük rota için 1
+            "timeSlot": "Sabah" if i <= 1 else ("Öğleden Sonra" if i <= 3 else "Akşam")
+        })
+    
+    # Decrease remaining routes (if not unlimited)
+    if current_user.remaining_routes > 0:
+        current_user.remaining_routes -= 1
+        await db.commit()
     
     # Save to history (is_saved=False)
     trip_entry = models.Trip(
@@ -102,7 +193,8 @@ async def generate_route(data: RouteRequest, db: AsyncSession = Depends(get_db),
             "mode": data.mode,
             "distanceKm": 5.2,
             "durationMinutes": 45
-        }
+        },
+        "remaining_routes": current_user.remaining_routes
     }
 
 @app.get("/api/places")
@@ -245,6 +337,13 @@ async def create_detailed_trip_plan(
     
     print(f"📝 Trip plan talebi alındı: {trip_request.city}, {trip_request.days} gün")
     
+    # Kredi kontrolü
+    if current_user.remaining_routes == 0:
+        raise HTTPException(
+            status_code=403,
+            detail="Rota oluşturma hakkınız kalmadı. Lütfen premium plan satın alın."
+        )
+    
     try:
         # Form verilerini dict'e çevir
         trip_data = {
@@ -260,14 +359,64 @@ async def create_detailed_trip_plan(
         # AI ile detaylı itinerary oluştur
         itinerary = await generate_detailed_trip_itinerary(trip_data)
         
+        # Her aktivite ve restoran için gerçek görselleri Unsplash'tan çek
+        print(f"🖼️ Görseller yükleniyor ({trip_request.city})...")
+        if itinerary and "daily_itinerary" in itinerary:
+            for day in itinerary["daily_itinerary"]:
+                # Morning activities
+                if day.get("morning") and day["morning"].get("activities"):
+                    for activity in day["morning"]["activities"]:
+                        if activity.get("name"):
+                            activity["image"] = await get_place_image(
+                                activity["name"], 
+                                city=trip_request.city,
+                                place_type="landmark"
+                            )
+                
+                # Lunch restaurant
+                if day.get("lunch") and day["lunch"].get("restaurant") and day["lunch"]["restaurant"].get("name"):
+                    day["lunch"]["restaurant"]["image"] = await get_place_image(
+                        day["lunch"]["restaurant"]["name"],
+                        city=trip_request.city,
+                        place_type="restaurant"
+                    )
+                
+                # Afternoon activities
+                if day.get("afternoon") and day["afternoon"].get("activities"):
+                    for activity in day["afternoon"]["activities"]:
+                        if activity.get("name"):
+                            activity["image"] = await get_place_image(
+                                activity["name"],
+                                city=trip_request.city,
+                                place_type="landmark"
+                            )
+                
+                # Evening dinner
+                if day.get("evening") and day["evening"].get("dinner") and day["evening"]["dinner"].get("name"):
+                    day["evening"]["dinner"]["image"] = await get_place_image(
+                        day["evening"]["dinner"]["name"],
+                        city=trip_request.city,
+                        place_type="restaurant"
+                    )
+        
+        print("✅ Görseller yüklendi")
+        
+        # Kalan rota hakkını azalt (unlimited değilse)
+        if current_user.remaining_routes > 0:
+            current_user.remaining_routes -= 1
+            await db.commit()
+            await db.refresh(current_user)
+            print(f"✅ Kullanıcı kredisi güncellendi: {current_user.remaining_routes} kaldı")
+        
         # NOT: Artık veritabanına otomatik kaydetmiyoruz!
         # Kullanıcı "Kaydet" butonuna basarsa o zaman kaydedilecek.
         
-        print(f"✅ {trip_request.days} günlük plan başarıyla oluşturuldu (DB'ye kaydedilmedi)")
+        print(f"✅ {trip_request.days} günlük plan başarıyla oluşturuldu")
         
         return {
             "success": True,
             "itinerary": itinerary,
+            "remaining_routes": current_user.remaining_routes,
             "message": f"{trip_request.city} için {trip_request.days} günlük tatil planınız hazır!"
         }
         

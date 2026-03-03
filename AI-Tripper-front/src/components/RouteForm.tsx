@@ -30,7 +30,7 @@ const INTERESTS_MAP: Record<string, string> = {
 
 export default function RouteForm() {
     const navigate = useNavigate();
-    const { token } = useAuthStore();
+    const { token, user, updateUser } = useAuthStore();
     const setCurrentTripPlan = useTripStore((state) => state.setCurrentTripPlan);
     const setCurrentTripFormData = useTripStore((state) => state.setCurrentTripFormData);
     const [city, setCity] = useState("");
@@ -68,7 +68,7 @@ export default function RouteForm() {
                 .toLowerCase()
                 .replace(/i̇/g, 'i')  // Türkçe İ düzeltmesi
                 .replace(/ı/g, 'i');  // Türkçe ı -> i
-            
+
             const filtered = destinations.filter(dest => {
                 const destName = dest.name
                     .toLowerCase()
@@ -78,10 +78,10 @@ export default function RouteForm() {
                     .toLowerCase()
                     .replace(/i̇/g, 'i')
                     .replace(/ı/g, 'i');
-                
+
                 return destName.includes(searchTerm) || destCountry.includes(searchTerm);
             });
-            
+
             console.log(`🔍 "${city}" için ${filtered.length} sonuç bulundu`);
             setFilteredDestinations(filtered.slice(0, 5)); // Show max 5 suggestions
             setShowSuggestions(filtered.length > 0);
@@ -110,7 +110,7 @@ export default function RouteForm() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!city || !travelers || !transport || interests.length === 0) {
             alert("Lütfen tüm alanları doldurun!");
             return;
@@ -122,7 +122,7 @@ export default function RouteForm() {
         }
 
         setNormalLoading(true);
-        
+
         // Yükleme mesajları
         const messages = [
             "🔍 Form verileri işleniyor...",
@@ -132,10 +132,10 @@ export default function RouteForm() {
             "🗺️ Her gün için rota oluşturuluyor...",
             "✨ Son detaylar ekleniyor..."
         ];
-        
+
         let messageIndex = 0;
         setLoadingMessage(messages[0]);
-        
+
         const messageInterval = setInterval(() => {
             messageIndex = (messageIndex + 1) % messages.length;
             setLoadingMessage(messages[messageIndex]);
@@ -171,6 +171,15 @@ export default function RouteForm() {
             setLoadingMessage("");
 
             console.log("✅ Plan oluşturuldu:", response.itinerary);
+
+            // Kalan krediyi güncelle
+            if (response.remaining_routes !== undefined && user) {
+                updateUser({
+                    ...user,
+                    remaining_routes: response.remaining_routes
+                });
+                console.log("✅ Kredi güncellendi:", response.remaining_routes);
+            }
 
             // Store'a kaydet ve sonuç sayfasına yönlendir
             setCurrentTripPlan(response.itinerary);
@@ -217,7 +226,7 @@ export default function RouteForm() {
                     className="w-full border-2 border-gray-200 py-3.5 px-5 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300"
                     required
                 />
-                
+
                 {/* Autocomplete Suggestions */}
                 {showSuggestions && filteredDestinations.length > 0 && (
                     <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
@@ -289,11 +298,10 @@ export default function RouteForm() {
                             key={interest}
                             type="button"
                             onClick={() => toggleInterest(interest)}
-                            className={`py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${
-                                interests.includes(interest)
-                                    ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg scale-105"
-                                    : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
-                            }`}
+                            className={`py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${interests.includes(interest)
+                                ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg scale-105"
+                                : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                                }`}
                         >
                             {interest}
                         </button>
@@ -312,11 +320,10 @@ export default function RouteForm() {
                             key={option}
                             type="button"
                             onClick={() => setTransport(option)}
-                            className={`flex-1 py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${
-                                transport === option
-                                    ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-105"
-                                    : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
-                            }`}
+                            className={`flex-1 py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${transport === option
+                                ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-105"
+                                : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                                }`}
                         >
                             {option === "Самолет" ? "✈️ Самолет" : option === "Автомобиль" ? "🚗 Автомобиль" : "🤷 Не важно"}
                         </button>
@@ -333,14 +340,14 @@ export default function RouteForm() {
                 >
                     {normalLoading ? "🔄 Plan Hazırlanıyor..." : "🗓️ Detaylı Gün Gün Plan Oluştur"}
                 </button>
-                
+
                 {!token && (
                     <p className="text-center text-sm text-red-500 mt-2">
                         ⚠️ Plan oluşturmak için giriş yapmalısınız
                     </p>
                 )}
             </div>
-            
+
             {/* Loading Modal */}
             <LoadingModal isOpen={normalLoading} />
         </form>

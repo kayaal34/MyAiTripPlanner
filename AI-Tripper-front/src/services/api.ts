@@ -15,6 +15,7 @@ export type RouteRequest = {
 export type RouteResponse = {
     places: Place[];
     route: RouteInfo;
+    remaining_routes?: number; // Kullanıcının kalan rota hakkı
 }
 
 // API Error type
@@ -42,7 +43,7 @@ export async function fetchRoute(request: RouteRequest, token?: string): Promise
         const headers: HeadersInit = {
             "Content-Type": "application/json",
         };
-        
+
         // Add auth token if available
         if (token) {
             headers["Authorization"] = `Bearer ${token}`;
@@ -120,7 +121,7 @@ export type UserResponse = {
     interests?: string[];
     avatar_url?: string;
     created_at: string;
-    
+
     // Personal preferences for AI trip planning
     gender?: string;
     preferred_countries?: string[];
@@ -223,7 +224,7 @@ export type UpdateProfileRequest = {
     hobbies?: string[];
     interests?: string[];
     avatar_url?: string;
-    
+
     // Personal preferences for AI trip planning
     gender?: string;
     preferred_countries?: string[];
@@ -712,10 +713,10 @@ export async function sendContactMessage(data: ContactMessageRequest): Promise<C
  */
 export async function getContactMessages(token: string, unreadOnly: boolean = false): Promise<ContactMessageResponse[]> {
     try {
-        const url = unreadOnly 
+        const url = unreadOnly
             ? `${API_BASE_URL}/api/contact/messages?unread_only=true`
             : `${API_BASE_URL}/api/contact/messages`;
-            
+
         const response = await fetch(url, {
             method: "GET",
             headers: {
@@ -787,5 +788,133 @@ export async function getPopularDestinations(): Promise<Destination[]> {
     } catch (error) {
         if (error instanceof ApiError) throw error;
         throw new ApiError("Network error getting destinations", undefined, error);
+    }
+}
+
+// ============= SUBSCRIPTION API =============
+
+export type Plan = {
+    id: string;
+    name: string;
+    price: number;
+    features: string[];
+}
+
+export type Subscription = {
+    id: number;
+    user_id: number;
+    plan: string;
+    status: string;
+    amount: number;
+    currency: string;
+    current_period_end: string | null;
+    cancel_at_period_end: boolean;
+}
+
+export type CheckoutRequest = {
+    plan: string;
+    success_url: string;
+    cancel_url: string;
+}
+
+export type CheckoutResponse = {
+    checkout_url: string;
+    session_id: string;
+}
+
+/**
+ * Tüm plan seçeneklerini getir
+ */
+export async function getPlans(): Promise<Plan[]> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/subscription/plans`, {
+            method: "GET",
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to get plans", response.status);
+        }
+
+        const data = await response.json();
+        return data.plans;
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error getting plans", undefined, error);
+    }
+}
+
+/**
+ * Kullanıcının mevcut aboneliğini getir
+ */
+export async function getCurrentSubscription(token: string): Promise<Subscription> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/subscription/current`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new ApiError("Failed to get subscription", response.status);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error getting subscription", undefined, error);
+    }
+}
+
+/**
+ * Stripe Checkout session oluştur
+ */
+export async function createCheckoutSession(
+    checkoutRequest: CheckoutRequest,
+    token: string
+): Promise<CheckoutResponse> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/subscription/checkout`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify(checkoutRequest),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new ApiError(error.detail || "Failed to create checkout", response.status);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error creating checkout", undefined, error);
+    }
+}
+
+/**
+ * Aboneliği iptal et
+ */
+export async function cancelSubscription(token: string): Promise<{ message: string; current_period_end: string }> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/subscription/cancel`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new ApiError(error.detail || "Failed to cancel subscription", response.status);
+        }
+
+        return await response.json();
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        throw new ApiError("Network error canceling subscription", undefined, error);
     }
 }

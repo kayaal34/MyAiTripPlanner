@@ -45,6 +45,9 @@ class User(UserBase):
     travel_style: Optional[str] = None
     age_range: Optional[str] = None
     
+    # Subscription & Usage
+    remaining_routes: int = 3
+    
     class Config:
         from_attributes = True
 
