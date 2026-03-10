@@ -137,6 +137,13 @@ Müşteri: {travelers}, Bütçe: {budget_description}, İlgi: {interests_text}, 
 3. Gerçek mekan isimleri kullan (jenerik isimler yasak)
 4. Her string değeri çift tırnak içinde olmalı
 
+⚠️ GENERAL_TIPS İÇİN KRİTİK TALİMATLAR:
+- local_customs: {city}'e özgü GERÇEK kültürel normlar, görgü kuralları, yasaklar, davranış biçimleri
+- safety: {city} için SPESİFİK güvenlik tavsiyeleri, kaçınılması gereken bölgeler, dikkat edilmesi gerekenler
+- money: Para birimi detayları, ATM ücretleri, kredi kartı kabul oranı, bahşiş kültürü, döviz büroları
+- emergency_contacts: {city}'deki GERÇEK acil durum telefonları (polis, ambulans, itfaiye, turist polisi varsa)
+- useful_phrases: Yerel dilde 6-8 KULLANIŞLI ifade (selamlaşma, teşekkür, yardım, fiyat sorma, yön sorma vb.)
+
 SADECE AŞAĞIDAKİ JSON FORMATINDA CEVAP VER:
 
 {{
@@ -225,9 +232,23 @@ SADECE AŞAĞIDAKİ JSON FORMATINDA CEVAP VER:
     }}
   ],
   "general_tips": {{
-    "safety": "Güvenlik ipucu",
-    "money": "Para bilgisi",
-    "useful_phrases": ["Kelime 1", "Kelime 2"]
+    "local_customs": "{city}'e özgü GERÇEK kültürel kurallar ve görgü (örn: giyim, selamlaşma, din, bahşiş kültürü)",
+    "safety": "{city} için SPESİFİK güvenlik tavsiyeleri (güvenli/tehlikeli semtler, dolandırıcılık taktikleri, polis durumu)",
+    "money": "Para birimi: gerçek döviz büroları, ATM komisyonları, kredi kartı kabul yerleri, bahşiş oranları, pazarlık kültürü",
+    "emergency_contacts": {{
+      "police": "{city} polis numarası (gerçek)",
+      "ambulance": "{city} ambulans numarası (gerçek)",
+      "fire": "{city} itfaiye numarası (gerçek)",
+      "tourist_police": "{city} turist polisi numarası (varsa gerçek, yoksa boş string)"
+    }},
+    "useful_phrases": [
+      "Merhaba - Yerel dilde karşılığı",
+      "Teşekkürler - Yerel dilde karşılığı",
+      "Lütfen - Yerel dilde karşılığı",
+      "Ne kadar? - Yerel dilde karşılığı",
+      "Yardım! - Yerel dilde karşılığı",
+      "Nerede? - Yerel dilde karşılığı"
+    ]
   }},
   "packing_list": ["Eşya 1", "Eşya 2", "Eşya 3"]
 }}
@@ -267,9 +288,29 @@ KRİTİK:
             ]
         }
         
-        # Asenkron HTTP isteği
-        async with httpx.AsyncClient(timeout=90.0) as client:
-            response = await client.post(url, headers=headers, json=data)
+        # Asenkron HTTP isteği (detaylı timeout ayarları)
+        timeout_config = httpx.Timeout(
+            connect=30.0,  # Bağlantı kurma: 30 saniye
+            read=120.0,    # Veri okuma: 120 saniye (Gemini yavaş olabilir)
+            write=30.0,    # Veri yazma: 30 saniye
+            pool=30.0      # Connection pool: 30 saniye
+        )
+        
+        try:
+            async with httpx.AsyncClient(timeout=timeout_config) as client:
+                response = await client.post(url, headers=headers, json=data)
+        except httpx.ConnectTimeout:
+            print("⏱️ Gemini API bağlantı timeout'u (30 saniye)")
+            raise HTTPException(
+                status_code=504,
+                detail="Gemini API'ye bağlanılamadı. İnternet bağlantınızı kontrol edin veya daha sonra tekrar deneyin."
+            )
+        except httpx.ReadTimeout:
+            print("⏱️ Gemini API okuma timeout'u (120 saniye)")
+            raise HTTPException(
+                status_code=504,
+                detail="API yanıt vermedi. Daha kısa bir süre veya daha az gün seçerek tekrar deneyin."
+            )
         
         if response.status_code != 200:
             error_detail = response.text[:500]
@@ -314,12 +355,12 @@ KRİTİK:
                 detail="AI'dan gelen yanıt işlenemedi. Lütfen tekrar deneyin."
             )
             
-    except httpx.TimeoutException:
-        print(f"⏱️ Gemini API timeout (90 saniye aşıldı)")
-        raise HTTPException(
-            status_code=504,
-            detail="API zaman aşımına uğradı. Lütfen tekrar deneyin."
-        )
+    except httpx.ConnectTimeout:
+        # Yukarıda zaten yakalanıyor ama güvenlik için burada da ekleyelim
+        raise
+    except httpx.ReadTimeout:
+        # Yukarıda zaten yakalanıyor ama güvenlik için burada da ekleyelim
+        raise
     except httpx.RequestError as e:
         print(f"❌ HTTP istek hatası: {e}")
         raise HTTPException(

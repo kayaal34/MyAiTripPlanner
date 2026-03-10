@@ -524,6 +524,20 @@ export async function createDetailedTripPlan(
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
+            
+            // 401 Unauthorized - Token geçersiz veya süresi dolmuş
+            if (response.status === 401) {
+                // localStorage'daki token'ı temizle
+                localStorage.removeItem('auth-storage');
+                // Kullanıcıyı login sayfasına yönlendir
+                window.location.href = '/';
+                throw new ApiError(
+                    "Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.",
+                    401,
+                    errorData
+                );
+            }
+            
             throw new ApiError(
                 errorData.detail || "Failed to create trip plan",
                 response.status,
@@ -755,39 +769,6 @@ export async function markMessageAsRead(messageId: number, token: string): Promi
     } catch (error) {
         if (error instanceof ApiError) throw error;
         throw new ApiError("Network error marking message as read", undefined, error);
-    }
-}
-
-// ============= DESTINATIONS API =============
-
-export type Destination = {
-    name: string;
-    country: string;
-}
-
-export type DestinationsResponse = {
-    success: boolean;
-    destinations: Destination[];
-}
-
-/**
- * Popüler şehir ve ülke listesini getir (autocomplete için)
- */
-export async function getPopularDestinations(): Promise<Destination[]> {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/destinations`, {
-            method: "GET",
-        });
-
-        if (!response.ok) {
-            throw new ApiError("Failed to get destinations", response.status);
-        }
-
-        const data: DestinationsResponse = await response.json();
-        return data.destinations;
-    } catch (error) {
-        if (error instanceof ApiError) throw error;
-        throw new ApiError("Network error getting destinations", undefined, error);
     }
 }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { createDetailedTripPlan, getPopularDestinations, type Destination } from "../services/api";
+import { createDetailedTripPlan } from "../services/api";
 import { useAuthStore } from "../store/useAuthStore";
 import { useTripStore } from "../store/useTripStore";
 import LoadingModal from "./LoadingModal";
@@ -41,55 +41,107 @@ export default function RouteForm() {
     const [loadingMessage, setLoadingMessage] = useState("");
     const [normalLoading, setNormalLoading] = useState(false);
 
-    // Autocomplete states
-    const [destinations, setDestinations] = useState<Destination[]>([]);
-    const [filteredDestinations, setFilteredDestinations] = useState<Destination[]>([]);
+    // City autocomplete states
+    const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+    const [isCitySelected, setIsCitySelected] = useState(false);
+    const [showCityWarning, setShowCityWarning] = useState(false);
 
-    // Load destinations on component mount
+    // Fetch city suggestions from OpenStreetMap Nominatim API (free, no key required)
     useEffect(() => {
-        const loadDestinations = async () => {
-            try {
-                console.log("🔄 Şehir listesi yükleniyor...");
-                const data = await getPopularDestinations();
-                console.log("✅ Şehir listesi yüklendi:", data.length, "şehir");
-                setDestinations(data);
-            } catch (error) {
-                console.error("❌ Şehir listesi yüklenemedi:", error);
-            }
-        };
-        loadDestinations();
-    }, []);
-
-    // Filter destinations when city input changes
-    useEffect(() => {
-        if (city.trim().length > 0) {
-            const searchTerm = city
-                .toLowerCase()
-                .replace(/i̇/g, 'i')  // Türkçe İ düzeltmesi
-                .replace(/ı/g, 'i');  // Türkçe ı -> i
-
-            const filtered = destinations.filter(dest => {
-                const destName = dest.name
-                    .toLowerCase()
-                    .replace(/i̇/g, 'i')
-                    .replace(/ı/g, 'i');
-                const destCountry = dest.country
-                    .toLowerCase()
-                    .replace(/i̇/g, 'i')
-                    .replace(/ı/g, 'i');
-
-                return destName.includes(searchTerm) || destCountry.includes(searchTerm);
-            });
-
-            console.log(`🔍 "${city}" için ${filtered.length} sonuç bulundu`);
-            setFilteredDestinations(filtered.slice(0, 5)); // Show max 5 suggestions
-            setShowSuggestions(filtered.length > 0);
-        } else {
-            setFilteredDestinations([]);
+        if (city.trim().length < 1) {
+            setCitySuggestions([]);
             setShowSuggestions(false);
+            return;
         }
-    }, [city, destinations]);
+
+        const timeoutId = setTimeout(async () => {
+            setIsLoadingSuggestions(true);
+            try {
+                // Normalize Turkish characters for better search
+                const searchQuery = city
+                    .replace(/İ/g, 'I')
+                    .replace(/ı/g, 'i')
+                    .replace(/Ş/g, 'S')
+                    .replace(/ş/g, 's')
+                    .replace(/Ğ/g, 'G')
+                    .replace(/ğ/g, 'g')
+                    .replace(/Ü/g, 'U')
+                    .replace(/ü/g, 'u')
+                    .replace(/Ö/g, 'O')
+                    .replace(/ö/g, 'o')
+                    .replace(/Ç/g, 'C')
+                    .replace(/ç/g, 'c');
+
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=15&addressdetails=1`,
+                    {
+                        headers: {
+                            'User-Agent': 'AI-Trip-Planner'
+                        }
+                    }
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('API Response:', data);
+                    
+                    const cities = data
+                        .map((item: any) => {
+                            // Şehir adını al - display_name'den veya address'den
+                            let cityName = '';
+                            let country = '';
+
+                            if (item.address) {
+                                // Öncelik sırasına göre şehir adını bul
+                                cityName = item.address.city || 
+                                          item.address.town || 
+                                          item.address.village ||
+                                          item.address.municipality ||
+                                          item.address.state ||
+                                          item.name ||
+                                          '';
+                                country = item.address.country || '';
+                            } else {
+                                // address yoksa display_name'den al
+                                const parts = item.display_name.split(',');
+                                cityName = parts[0]?.trim() || '';
+                                country = parts[parts.length - 1]?.trim() || '';
+                            }
+
+                            if (cityName && country && cityName !== country) {
+                                return `${cityName}, ${country}`;
+                            } else if (cityName) {
+                                return cityName;
+                            }
+                            return null;
+                        })
+                        .filter((value: string | null) => value !== null && value.length > 0)
+                        .filter((value: string, index: number, self: string[]) => 
+                            self.indexOf(value) === index // Remove duplicates
+                        )
+                        .slice(0, 8);
+                    
+                    console.log(`🔍 "${city}" için ${cities.length} şehir bulundu:`, cities);
+                    setCitySuggestions(cities);
+                    setShowSuggestions(cities.length > 0);
+                } else {
+                    console.error('API yanıt hatası:', response.status);
+                    setCitySuggestions([]);
+                    setShowSuggestions(false);
+                }
+            } catch (error) {
+                console.error("City fetch error:", error);
+                setCitySuggestions([]);
+                setShowSuggestions(false);
+            } finally {
+                setIsLoadingSuggestions(false);
+            }
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(timeoutId);
+    }, [city]);
 
     const interestOptions = [
         "Культура",
@@ -218,32 +270,74 @@ export default function RouteForm() {
                 </label>
                 <input
                     type="text"
-                    placeholder="Введите название города или страны..."
+                    placeholder="Введите название города..."
                     value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    onFocus={() => city.trim().length > 0 && setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    onChange={(e) => {
+                        setCity(e.target.value);
+                        setIsCitySelected(false); // Manuel yazarken seçimi iptal et
+                        setShowCityWarning(false); // Uyarıyı kaldır
+                    }}
+                    onFocus={() => {
+                        if (citySuggestions.length > 0) setShowSuggestions(true);
+                        setShowCityWarning(false);
+                    }}
+                    onBlur={() => {
+                        setTimeout(() => {
+                            setShowSuggestions(false);
+                            // Eğer şehir yazılmış ama seçilmemişse uyarı göster
+                            if (city.trim().length > 0 && !isCitySelected) {
+                                setShowCityWarning(true);
+                            }
+                        }, 200);
+                    }}
                     className="w-full border-2 border-gray-200 py-3.5 px-5 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300"
                     required
                 />
 
-                {/* Autocomplete Suggestions */}
-                {showSuggestions && filteredDestinations.length > 0 && (
-                    <div className="absolute z-10 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-                        {filteredDestinations.map((dest, index) => (
+                {/* City Suggestions Dropdown */}
+                {showSuggestions && citySuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                        {citySuggestions.map((suggestion, index) => (
                             <button
                                 key={index}
                                 type="button"
                                 onClick={() => {
-                                    setCity(`${dest.name}, ${dest.country}`);
+                                    setCity(suggestion);
+                                    setIsCitySelected(true); // Şehir seçildi
                                     setShowSuggestions(false);
                                 }}
                                 className="w-full text-left px-5 py-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
                             >
-                                <div className="font-semibold text-gray-800">{dest.name}</div>
-                                <div className="text-sm text-gray-500">{dest.country}</div>
+                                <div className="font-semibold text-gray-800">{suggestion}</div>
                             </button>
                         ))}
+                    </div>
+                )}
+
+                {/* Loading indicator */}
+                {isLoadingSuggestions && (
+                    <div className="absolute right-4 top-11 text-gray-400">
+                        <div className="animate-spin">⏳</div>
+                    </div>
+                )}
+
+                {/* Selected City Preview */}
+                {isCitySelected && city.trim().length > 0 && (
+                    <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 rounded-lg">
+                        <p className="text-sm text-gray-700">
+                            <span className="font-semibold text-blue-600">📍 Ваш план путешествия будет создан для:</span>
+                            <br />
+                            <span className="text-base font-bold text-gray-800 mt-1 inline-block">{city}</span>
+                        </p>
+                    </div>
+                )}
+
+                {/* City Selection Warning */}
+                {showCityWarning && !isCitySelected && city.trim().length > 0 && (
+                    <div className="mt-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                        <p className="text-sm text-red-700">
+                            <span className="font-semibold">⚠️ Пожалуйста, выберите город из списка</span>
+                        </p>
                     </div>
                 )}
             </div>

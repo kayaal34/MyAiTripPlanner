@@ -444,7 +444,24 @@ export default function TripPlanResult() {
                             <Phone className="w-5 h-5 text-red-500 flex-shrink-0 mt-1" />
                             <div>
                                 <h3 className="font-semibold text-gray-800 mb-2">Экстренные контакты</h3>
-                                <p className="text-gray-700">{general_tips.emergency_contacts}</p>
+                                {typeof general_tips.emergency_contacts === 'string' ? (
+                                    <p className="text-gray-700">{general_tips.emergency_contacts}</p>
+                                ) : (
+                                    <div className="text-sm text-gray-700 space-y-1">
+                                        {general_tips.emergency_contacts?.police && (
+                                            <p>🚓 Полиция: <span className="font-semibold">{general_tips.emergency_contacts.police}</span></p>
+                                        )}
+                                        {general_tips.emergency_contacts?.ambulance && (
+                                            <p>🚑 Скорая помощь: <span className="font-semibold">{general_tips.emergency_contacts.ambulance}</span></p>
+                                        )}
+                                        {general_tips.emergency_contacts?.fire && (
+                                            <p>🚒 Пожарная: <span className="font-semibold">{general_tips.emergency_contacts.fire}</span></p>
+                                        )}
+                                        {general_tips.emergency_contacts?.tourist_police && (
+                                            <p>👮 Туристическая полиция: <span className="font-semibold">{general_tips.emergency_contacts.tourist_police}</span></p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

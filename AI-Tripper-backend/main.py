@@ -204,36 +204,6 @@ async def get_places_list(city: str = "Istanbul", interests: str = "culture", st
     return {"success": True, "places": places}
 
 
-@app.get("/api/destinations")
-async def get_popular_destinations():
-    """Popüler şehir ve ülke listesini döndür (autocomplete için)"""
-    try:
-        import json
-        import os
-        
-        # Backend klasöründen data/popular_destinations.json'u oku
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        json_path = os.path.join(current_dir, "data", "popular_destinations.json")
-        
-        with open(json_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        
-        print(f"✅ {len(data['cities'])} şehir yüklendi")
-        return {"success": True, "destinations": data["cities"]}
-    except Exception as e:
-        print(f"❌ Şehir listesi yüklenemedi: {e}")
-        # Fallback: Basit liste
-        return {
-            "success": True,
-            "destinations": [
-                {"name": "Paris", "country": "Fransa"},
-                {"name": "İstanbul", "country": "Türkiye"},
-                {"name": "Roma", "country": "İtalya"},
-                {"name": "Barselona", "country": "İspanya"},
-                {"name": "Londra", "country": "İngiltere"}
-            ]
-        }
-
 @app.get("/api/country-info/{country_name}")
 async def get_country_info(country_name: str):
     """REST Countries API'den ülke bilgilerini çek"""
