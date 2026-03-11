@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, X, Loader2, Crown, Sparkles } from 'lucide-react';
+import { Check, Loader2, Crown, Sparkles } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 import Navbar from '../components/Navbar';

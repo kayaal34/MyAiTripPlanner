@@ -8,6 +8,7 @@ import SavedTrips from "./pages/SavedTrips";
 import Settings from "./pages/Settings";
 import History from "./pages/History";
 import Pricing from "./pages/Pricing";
+import Destinations from "./pages/Destinations";
 import TripPlanResult from "./pages/TripPlanResult";
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/destinations" element={<Destinations />} />
         <Route path="/trip-plan" element={<TripPlanResult />} />
         <Route path="/saved-trips" element={<SavedTrips />} />
         <Route path="/settings" element={<Settings />} />
