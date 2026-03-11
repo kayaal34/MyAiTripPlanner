@@ -108,9 +108,9 @@ async def generate_detailed_trip_itinerary(trip_data: dict):
         
         # Bütçe aralıkları (örnek, para birimi şehre göre değişebilir)
         budget_ranges = {
-            "dusuk": "ekonomik (günlük 500-1000 TL bütçe)",
+            "ekonomik": "ekonomik (günlük 500-1000 TL bütçe)",
             "orta": "orta seviye (günlük 1000-2500 TL bütçe)",
-            "yuksek": "lüks (günlük 2500+ TL bütçe)"
+            "luks": "lüks (günlük 2500+ TL bütçe)"
         }
         budget_description = budget_ranges.get(budget.lower(), budget_ranges["orta"])
         

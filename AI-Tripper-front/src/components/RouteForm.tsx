@@ -38,6 +38,7 @@ export default function RouteForm() {
     const [travelers, setTravelers] = useState("");
     const [interests, setInterests] = useState<string[]>([]);
     const [transport, setTransport] = useState("");
+    const [budget, setBudget] = useState("orta");
     const [loadingMessage, setLoadingMessage] = useState("");
     const [normalLoading, setNormalLoading] = useState(false);
 
@@ -205,7 +206,7 @@ export default function RouteForm() {
                 travelers: travelersValue,
                 interests: interestsValues,
                 transport: transportValue,
-                budget: "orta"
+                budget: budget
             });
 
             // Yeni API'yi çağır
@@ -215,7 +216,7 @@ export default function RouteForm() {
                 travelers: travelersValue,
                 interests: interestsValues,
                 transport: transportValue,
-                budget: "orta"
+                budget: budget
             }, token);
 
             clearInterval(messageInterval);
@@ -241,7 +242,7 @@ export default function RouteForm() {
                 travelers: travelersValue,
                 interests: interestsValues,
                 transport: transportValue,
-                budget: "orta"
+                budget: budget
             });
             navigate("/trip-plan");
 
@@ -422,6 +423,48 @@ export default function RouteForm() {
                             {option === "Самолет" ? "✈️ Самолет" : option === "Автомобиль" ? "🚗 Автомобиль" : "🤷 Не важно"}
                         </button>
                     ))}
+                </div>
+            </div>
+
+            {/* Bütçe */}
+            <div className="mb-8">
+                <label className="block mb-3 text-sm font-semibold text-gray-700">
+                    Бюджет
+                </label>
+                <div className="flex gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setBudget("ekonomik")}
+                        className={`flex-1 py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${
+                            budget === "ekonomik"
+                                ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg scale-105"
+                                : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-green-300 hover:bg-green-50"
+                        }`}
+                    >
+                        💰 Экономный
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setBudget("orta")}
+                        className={`flex-1 py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${
+                            budget === "orta"
+                                ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg scale-105"
+                                : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-yellow-300 hover:bg-yellow-50"
+                        }`}
+                    >
+                        💵 Средний
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setBudget("luks")}
+                        className={`flex-1 py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${
+                            budget === "luks"
+                                ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg scale-105"
+                                : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50"
+                        }`}
+                    >
+                        💎 Люкс
+                    </button>
                 </div>
             </div>
 

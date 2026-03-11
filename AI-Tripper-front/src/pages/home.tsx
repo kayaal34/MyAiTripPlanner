@@ -1,5 +1,6 @@
 import RouteForm from "../components/RouteForm";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import SocialTiles from "../components/SocialTiles";
 import Hero from "../components/Hero";
 import FAQ from "../components/FAQ";
@@ -8,7 +9,17 @@ import AuthModal from "../components/AuthModal";
 import MapView from "../components/MapView";
 
 export default function Home() {
+    const location = useLocation();
     const [showAuthModal, setShowAuthModal] = useState(false);
+
+    // Pricing sayfasından gelen state'i kontrol et
+    useEffect(() => {
+        if (location.state?.openAuthModal) {
+            setShowAuthModal(true);
+            // State'i temizle
+            window.history.replaceState({}, document.title);
+        }
+    }, [location]);
 
     return (
         <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col items-center">

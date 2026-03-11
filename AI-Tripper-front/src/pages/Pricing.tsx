@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Check, X, Loader2, Crown, Sparkles } from 'lucide-react';
 import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
@@ -14,6 +15,7 @@ interface Plan {
 }
 
 const Pricing = () => {
+    const navigate = useNavigate();
     const [plans, setPlans] = useState<Plan[]>([]);
     const [currentPlan, setCurrentPlan] = useState<string>('free');
     const [loading, setLoading] = useState(false);
@@ -72,8 +74,8 @@ const Pricing = () => {
         }
 
         if (!isAuthenticated || !token) {
-            alert('Lütfen önce giriş yapın!');
-            window.location.href = '/login';
+            alert('Lütfen önce giriş yapın! Anasayfada giriş yapabilirsiniz.');
+            navigate('/', { state: { openAuthModal: true } });
             return;
         }
 
