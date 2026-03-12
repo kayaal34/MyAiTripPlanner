@@ -94,7 +94,7 @@ const Pricing = () => {
                         Authorization: `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    timeout: 10000,
+                    timeout: 30000, // 30 saniye (Stripe API için yeterli)
                 }
             );
 
@@ -158,7 +158,7 @@ const Pricing = () => {
                         Authorization: `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    timeout: 10000,
+                    timeout: 30000, // 30 saniye
                 }
             );
 

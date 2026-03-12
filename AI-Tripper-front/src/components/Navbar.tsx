@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { LogIn, User, Settings, Heart } from "lucide-react";
+import { LogIn, User, Settings, Heart, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
+import { getCurrentUser } from "../services/api";
 
 interface NavbarProps {
     onAuthClick?: () => void;
@@ -12,8 +13,44 @@ interface NavbarProps {
 export default function Navbar({ onAuthClick, transparent = false }: NavbarProps) {
     const [showKurumsalDropdown, setShowKurumsalDropdown] = useState(false);
     const [showUserDropdown, setShowUserDropdown] = useState(false);
-    const { isAuthenticated, user, logout } = useAuthStore();
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const { isAuthenticated, user, logout, token, updateUser } = useAuthStore();
     const navigate = useNavigate();
+
+    // Component mount olduğunda kullanıcı bilgisini bir kere güncelle
+    useEffect(() => {
+        const refreshUserData = async () => {
+            if (isAuthenticated && token && user) {
+                try {
+                    const updatedUser = await getCurrentUser(token);
+                    updateUser(updatedUser);
+                    console.log('🔄 Navbar: Kullanıcı bilgisi güncellendi:', updatedUser.remaining_routes);
+                } catch (error) {
+                    console.error('⚠️ Kullanıcı bilgisi güncellenemedi:', error);
+                }
+            }
+        };
+
+        // Sadece component mount olduğunda çalışacak
+        refreshUserData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Boş dependency array - sadece mount'ta çalışır
+
+    // Manuel refresh fonksiyonu
+    const handleManualRefresh = async () => {
+        if (!isAuthenticated || !token) return;
+
+        setIsRefreshing(true);
+        try {
+            const updatedUser = await getCurrentUser(token);
+            updateUser(updatedUser);
+            console.log('✅ Kullanıcı bilgisi manuel olarak güncellendi:', updatedUser.remaining_routes);
+        } catch (error) {
+            console.error('❌ Güncelleme hatası:', error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     return (
         <motion.div
@@ -114,22 +151,34 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                 {isAuthenticated && user ? (
                     <>
                         {/* Kredi/Rota Göstergesi */}
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm border ${user.remaining_routes === -1
-                            ? "bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200 text-yellow-700"
-                            : user.remaining_routes === 0
-                                ? "bg-red-50 border-red-200 text-red-600"
-                                : "bg-blue-50 border-blue-200 text-blue-700"
-                            }`}>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                            {user.remaining_routes === -1 ? (
-                                <span>∞ Sınırsız</span>
-                            ) : user.remaining_routes === 0 ? (
-                                <span>0 Rota</span>
-                            ) : (
-                                <span>{user.remaining_routes} Rota</span>
-                            )}
+                        <div className="flex items-center gap-2">
+                            <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm border ${user.remaining_routes === -1
+                                ? "bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200 text-yellow-700"
+                                : user.remaining_routes === 0
+                                    ? "bg-red-50 border-red-200 text-red-600"
+                                    : "bg-blue-50 border-blue-200 text-blue-700"
+                                }`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                                {user.remaining_routes === -1 ? (
+                                    <span>∞ Sınırsız</span>
+                                ) : user.remaining_routes === 0 ? (
+                                    <span>0 Rota</span>
+                                ) : (
+                                    <span>{user.remaining_routes} Rota</span>
+                                )}
+                            </div>
+
+                            {/* Manuel Yenile Butonu */}
+                            <button
+                                onClick={handleManualRefresh}
+                                disabled={isRefreshing}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-all disabled:opacity-50"
+                                title="Rota sayısını yenile"
+                            >
+                                <RefreshCw className={`w-4 h-4 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            </button>
                         </div>
 
                         <div
