@@ -134,7 +134,7 @@ async def create_checkout_session(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """DEMO: Stripe Checkout yerine direkt subscription aktif et"""
+    """Stripe Checkout Session oluştur"""
     plan = checkout_request.plan.lower()
     
     if plan not in ["premium", "pro"]:
@@ -143,41 +143,60 @@ async def create_checkout_session(
     plan_info = PLANS[plan]
     
     try:
-        # Get or create subscription
-        result = await db.execute(
-            select(Subscription).filter(Subscription.user_id == current_user.id)
+        # Gerçek Stripe Checkout Session oluştur
+        print(f"🎯 Stripe Checkout Session oluşturuluyor...")
+        print(f"   User: {current_user.email} (ID: {current_user.id})")
+        print(f"   Plan: {plan.upper()} - ${plan_info.price}/ay")
+        
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "unit_amount": int(plan_info.price * 100),  # Cent cinsinden
+                        "product_data": {
+                            "name": f"{plan_info.name} Plan",
+                            "description": f"AI Trip Planner {plan_info.name} Subscription",
+                        },
+                        "recurring": {
+                            "interval": "month"
+                        }
+                    },
+                    "quantity": 1,
+                }
+            ],
+            mode="subscription",
+            success_url=checkout_request.success_url + "?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=checkout_request.cancel_url,
+            metadata={
+                "user_id": str(current_user.id),
+                "plan": plan
+            },
+            customer_email=current_user.email,
+            billing_address_collection="auto",
+            payment_method_collection="always",
+            subscription_data={
+                "metadata": {
+                    "user_id": str(current_user.id),
+                    "plan": plan
+                }
+            }
         )
-        subscription = result.scalar_one_or_none()
         
-        if not subscription:
-            subscription = Subscription(
-                user_id=current_user.id,
-                stripe_customer_id=f"demo_cus_{current_user.id}",
-                plan=plan,
-                status="active",
-                amount=plan_info.price,
-                currency="usd"
-            )
-            db.add(subscription)
-        else:
-            subscription.plan = plan
-            subscription.status = "active"
-            subscription.amount = plan_info.price
+        print(f"✅ Checkout session oluşturuldu: {checkout_session.id}")
+        print(f"   URL: {checkout_session.url}")
         
-        # Give unlimited routes
-        current_user.remaining_routes = -1
-        
-        await db.commit()
-        
-        # Return success URL (frontend will handle this)
         return {
-            "checkout_url": checkout_request.success_url,
-            "session_id": f"demo_session_{current_user.id}",
-            "demo": True,
-            "message": f"🎉 {plan.upper()} planı aktif edildi! Sınırsız rota oluşturabilirsiniz."
+            "checkout_url": checkout_session.url,
+            "session_id": checkout_session.id,
+            "demo": False
         }
     
     except Exception as e:
+        print(f"❌ Checkout hatası: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -196,11 +215,42 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     except stripe.error.SignatureVerificationError as e:
         raise HTTPException(status_code=400, detail="Invalid signature")
     
-    # Abonelik oluşturuldu
-    if event["type"] == "checkout.session.completed":
-        session = event["data"]["object"]
-        user_id = int(session["metadata"]["user_id"])
-        plan = session["metadata"]["plan"]
+    # Abonelik oluşturuldu - hem checkout.session.completed hem de customer.subscription.created için
+    if event["type"] in ["checkout.session.completed", "customer.subscription.created"]:
+        # Event type'a göre data objesini al
+        if event["type"] == "checkout.session.completed":
+            session = event["data"]["object"]
+            print(f"🎉 Checkout session tamamlandı!")
+            print(f"   Session ID: {session.get('id')}")
+            print(f"   Customer Email: {session.get('customer_email')}")
+            
+            # Test event'lerinde metadata olmayabilir
+            if "metadata" not in session or "user_id" not in session["metadata"]:
+                print("⚠️ Test event veya metadata eksik, atlanıyor")
+                return {"status": "success", "message": "Test event ignored"}
+            
+            user_id = int(session["metadata"]["user_id"])
+            plan = session["metadata"]["plan"]
+            subscription_id = session.get("subscription")
+            customer_id = session.get("customer")
+        
+        else:  # customer.subscription.created
+            subscription_data = event["data"]["object"]
+            print(f"🎉 Subscription oluşturuldu!")
+            print(f"   Subscription ID: {subscription_data.get('id')}")
+            
+            # Metadata'dan bilgileri al
+            if "metadata" not in subscription_data or "user_id" not in subscription_data["metadata"]:
+                print("⚠️ Metadata eksik, atlanıyor")
+                return {"status": "success", "message": "Metadata missing"}
+            
+            user_id = int(subscription_data["metadata"]["user_id"])
+            plan = subscription_data["metadata"]["plan"]
+            subscription_id = subscription_data.get("id")
+            customer_id = subscription_data.get("customer")
+        
+        print(f"   User ID: {user_id}")
+        print(f"   Plan: {plan}")
         
         result = await db.execute(
             select(Subscription).filter(Subscription.user_id == user_id)
@@ -211,7 +261,8 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             subscription.plan = plan
             subscription.status = "active"
             subscription.amount = PLANS[plan].price
-            subscription.stripe_subscription_id = session.get("subscription")
+            subscription.stripe_subscription_id = subscription_id
+            print(f"   ✅ Subscription güncellendi")
             
             # Give unlimited routes to premium/pro users
             user_result = await db.execute(
@@ -219,9 +270,37 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             )
             user = user_result.scalar_one_or_none()
             if user:
+                old_routes = user.remaining_routes
                 user.remaining_routes = -1  # Unlimited
+                print(f"   ✅ User routes güncellendi: {old_routes} -> -1 (unlimited)")
             
             await db.commit()
+            print(f"🎊 Webhook işlendi ve commit edildi!")
+        else:
+            print(f"   ⚠️ Subscription bulunamadı, yeni oluşturuluyor...")
+            # Create new subscription
+            new_subscription = Subscription(
+                user_id=user_id,
+                stripe_customer_id=customer_id,
+                stripe_subscription_id=subscription_id,
+                plan=plan,
+                status="active",
+                amount=PLANS[plan].price,
+                currency="usd"
+            )
+            db.add(new_subscription)
+            
+            # Give unlimited routes
+            user_result = await db.execute(
+                select(User).filter(User.id == user_id)
+            )
+            user = user_result.scalar_one_or_none()
+            if user:
+                user.remaining_routes = -1
+                print(f"   ✅ User routes güncellendi: -1 (unlimited)")
+            
+            await db.commit()
+            print(f"🎊 Yeni subscription oluşturuldu ve commit edildi!")
     
     # Abonelik yenilendi
     elif event["type"] == "invoice.payment_succeeded":

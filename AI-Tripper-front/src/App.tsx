@@ -10,6 +10,7 @@ import History from "./pages/History";
 import Pricing from "./pages/Pricing";
 import Destinations from "./pages/Destinations";
 import TripPlanResult from "./pages/TripPlanResult";
+import Success from "./pages/Success";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/saved-trips" element={<SavedTrips />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/history" element={<History />} />
+        <Route path="/success" element={<Success />} />
         <Route path="/admin/messages" element={<AdminMessages />} />
       </Routes>
     </div>
