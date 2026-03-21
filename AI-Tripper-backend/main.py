@@ -51,7 +51,7 @@ class TripPlanRequest(BaseModel):
     days: int
     travelers: str
     interests: list[str]
-    transport: str
+    transport: str = "farketmez"
     budget: str = "orta"
     start_date: str = ""
 

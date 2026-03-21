@@ -22,7 +22,7 @@ interface TripState {
         travelers: string;
         interests: string[];
         budget: string;
-        transport: string;
+        transport?: string;
     } | null;
 
     // Loading/Error durumları

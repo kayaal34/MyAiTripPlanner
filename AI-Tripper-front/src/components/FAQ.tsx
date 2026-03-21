@@ -8,40 +8,44 @@ interface FAQItem {
 
 const faqData: FAQItem[] = [
     {
-        question: "Нужно ли мне регистрироваться?",
-        answer: "Регистрация не является обязательной для создания маршрутов. Однако вы можете быстро зарегистрироваться, чтобы сохранить созданные маршруты, получить доступ к истории планов и управлять персонализированным профилем.",
+        question: "Plan oluşturmak için üye olmam gerekiyor mu?",
+        answer: "Evet. Kişiye özel rota üretimi, kaydetme ve geçmiş takibi için giriş yapmanız gerekiyor. Bu sayede planlarınız hesabınızda güvenli şekilde saklanır.",
     },
     {
-        question: "Как я могу создать маршрут?",
-        answer: "Просто заполните форму на главной странице (город назначения, продолжительность, бюджет и интересы) и нажмите кнопку 'Поехали!'. Наш интеллектуальный модуль на базе GPT-4o подготовит персональный маршрут за считанные секунды.",
+        question: "Free, Premium ve Pro planlar arasındaki fark nedir?",
+        answer: "Free plan temel kullanım içindir ve rota hakkı sınırlıdır. Premium ve Pro planlarda daha gelişmiş özellikler ve sınırsız rota avantajı sunulur.",
     },
     {
-        question: "Почему я должен вам доверять? (Точность данных)",
-        answer: "Наша интеллектуальная система фильтрации на Python проверяет не только популярность, но и актуальность и подлинность мест. Мы исключаем 'призрачные' или закрытые заведения из вашего маршрута, экономя ваше время.",
+        question: "Kalan rota hakkımı nereden görebilirim?",
+        answer: "Giriş yaptıktan sonra üst menüdeki hesap alanında kalan rota hakkınızı görebilirsiniz. Planınız Premium veya Pro ise sınırsız kullanım aktif olur.",
     },
     {
-        question: "Как вы обеспечиваете соответствие рекомендуемых мест моему бюджету?",
-        answer: "Наш алгоритм оптимизирует выбор ресторанов и мероприятий в пределах указанного вами бюджета на человека.",
+        question: "Premium’a nasıl geçebilirim?",
+        answer: "Premium sayfasından plan seçip güvenli ödeme adımlarını tamamlayabilirsiniz. Ödeme sonrası aboneliğiniz hesabınıza otomatik olarak tanımlanır.",
     },
     {
-        question: "Для каких городов я могу создать маршрут?",
-        answer: "Вы можете создавать маршруты для городов по всему миру. Наша система искусственного интеллекта анализирует туристические места, рестораны и активности, характерные для выбранного вами города, и предлагает наиболее подходящий маршрут.",
+        question: "Aboneliğimi iptal edebilir miyim?",
+        answer: "Evet. Aktif bir ücretli planınız varsa aboneliği iptal etme seçeneğini kullanabilirsiniz. İptal, mevcut fatura döneminin sonunda devreye girer.",
     },
     {
-        question: "Могу ли я редактировать или изменять свой маршрут?",
-        answer: "Да, созданный маршрут является рекомендацией. Вы можете изменять остановки с помощью перетаскивания на карте, добавлять или удалять места и настраивать маршрут под свои предпочтения.",
+        question: "Ödemeler güvenli mi?",
+        answer: "Evet. Ödemeler Stripe altyapısı üzerinden işlenir. Kart bilgileriniz doğrudan ödeme sağlayıcısı tarafından yönetilir, uygulama içinde kart verisi saklanmaz.",
     },
     {
-        question: "Работает ли приложение на мобильных устройствах?",
-        answer: "Да! Наше веб-приложение без проблем работает на мобильных устройствах, планшетах и настольных компьютерах. Благодаря адаптивному дизайну мы обеспечиваем лучший опыт на любом размере экрана.",
+        question: "Planlarımı kaydedebilir ve sonra tekrar açabilir miyim?",
+        answer: "Evet. Oluşturduğunuz planları kaydedebilir, daha sonra Hesabım bölümünden tekrar görüntüleyebilirsiniz.",
     },
     {
-        question: "Могу ли я поделиться маршрутами с друзьями?",
-        answer: "Конечно! Вы можете создать уникальную ссылку для каждого маршрута и поделиться ей с друзьями в социальных сетях или мессенджерах.",
+        question: "AI önerileri neye göre hazırlanıyor?",
+        answer: "Öneriler; şehir, gün sayısı, ilgi alanları, bütçe ve seyahat tipi bilgilerinize göre oluşturulur. Amaç, kısa sürede uygulanabilir ve dengeli bir rota sunmaktır.",
     },
     {
-        question: "По каким критериям искусственный интеллект рекомендует места?",
-        answer: "Наша модель GPT-4o анализирует ваши интересы, бюджет, продолжительность поездки и особенности города, выбирая самые популярные, актуальные и подходящие для вас места. Также учитываются отзывы пользователей и актуальность заведений.",
+        question: "Hangi şehirler için plan oluşturabilirim?",
+        answer: "Dünya genelindeki birçok şehir için plan oluşturabilirsiniz. Şehir adını seçerek rota üretimini başlatmanız yeterlidir.",
+    },
+    {
+        question: "Sorun yaşarsam nasıl destek alırım?",
+        answer: "İletişim sayfasından mesaj gönderebilir veya destek e-posta adresi üzerinden bize ulaşabilirsiniz. Ücretli planlarda öncelikli destek sağlanır.",
     },
 ];
 
@@ -57,10 +61,10 @@ export default function FAQ() {
             {/* Header */}
             <div className="mb-12 text-left">
                 <h2 className="mb-4 text-5xl font-display font-bold text-gradient">
-                    Часто задаваемые вопросы
+                    Sık Sorulan Sorular
                 </h2>
                 <p className="text-lg text-gray-600 font-medium">
-                    Здесь вы найдёте всё, что вас интересует
+                    Planlar, abonelik ve ödeme hakkında en çok merak edilenler
                 </p>
             </div>
 
@@ -109,12 +113,12 @@ export default function FAQ() {
             {/* Footer Note */}
             <div className="mt-12 text-left">
                 <p className="text-base text-gray-600">
-                    Есть ещё вопросы?{" "}
+                    Başka sorunuz mu var?{" "}
                     <a
                         href="mailto:destek@myaitripplanner.com"
                         className="font-semibold text-[#1e3a8a] transition-colors duration-300 hover:text-blue-700"
                     >
-                        Свяжитесь с нами
+                        Bizimle iletişime geçin
                     </a>
                 </p>
             </div>

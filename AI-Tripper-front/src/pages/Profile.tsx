@@ -14,7 +14,7 @@ import type {
     RouteHistoryResponse
 } from "../services/api";
 import { useNavigate } from "react-router-dom";
-import { MapPin, Heart, Settings, LogOut, Mail, Lock, Trash2, Calendar, Users, DollarSign, Eye, Clock } from "lucide-react";
+import { MapPin, Heart, Compass, Settings, LogOut, Mail, Lock, Trash2, Calendar, Users, DollarSign, Eye, Clock } from "lucide-react";
 
 type TabType = "hesabim" | "planlarim" | "favorilerim" | "ayarlar";
 
@@ -176,15 +176,15 @@ export default function Profile() {
                             <span className="text-lg font-bold text-gray-800">Planlarım</span>
                         </button>
 
-                        {/* Favorilerim */}
+                        {/* Keşfet */}
                         <button
-                            onClick={() => navigate("/saved-trips")}
+                            onClick={() => navigate("/destinations")}
                             className="group flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-pink-50 to-pink-100/50 hover:from-pink-100 hover:to-pink-200/50 rounded-2xl transition-all hover:shadow-lg border border-pink-200/50"
                         >
                             <div className="w-16 h-16 bg-pink-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Heart className="w-8 h-8 text-white" />
+                                <Compass className="w-8 h-8 text-white" />
                             </div>
-                            <span className="text-lg font-bold text-gray-800">Favorilerim</span>
+                            <span className="text-lg font-bold text-gray-800">Keşfet</span>
                         </button>
 
                         {/* Hesap Ayarlarım */}

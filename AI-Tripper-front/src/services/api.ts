@@ -408,7 +408,7 @@ export type TripPlanRequest = {
     days: number;
     travelers: string;
     interests: string[];
-    transport: string;
+    transport?: string;
     budget?: string;
     start_date?: string;
 }

@@ -86,13 +86,6 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                 </button>
 
                 <button
-                    onClick={() => navigate("/")}
-                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-[15px]"
-                >
-                    Tatil Planları
-                </button>
-
-                <button
                     onClick={() => navigate("/destinations")}
                     className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-[15px]"
                 >

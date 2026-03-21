@@ -97,7 +97,6 @@ async def generate_detailed_trip_itinerary(trip_data: dict):
         days = trip_data.get('days', 3)
         travelers = trip_data.get('travelers', 'yalniz')
         interests = trip_data.get('interests', [])
-        transport = trip_data.get('transport', 'yuruyerek')
         budget = trip_data.get('budget', 'orta')
         start_date = trip_data.get('start_date', '')
         
@@ -129,7 +128,7 @@ Sen {city} şehrinin en prestijli turist rehberisin. Gerçek mekanlar öner.
 
 {country_context}
 
-Müşteri: {travelers}, Bütçe: {budget_description}, İlgi: {interests_text}, Ulaşım: {transport}, {days} gün.
+Müşteri: {travelers}, Bütçe: {budget_description}, İlgi: {interests_text}, {days} gün.
 
 ⚠️ ÖNEMLİ JSON KURALLARI:
 1. Tüm açıklamalar MAKSIMUM 80 karakter olmalı

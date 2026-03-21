@@ -13,12 +13,6 @@ const TRAVELERS_MAP: Record<string, string> = {
     "С друзьями": "arkadaslar"
 };
 
-const TRANSPORT_MAP: Record<string, string> = {
-    "Самолет": "ucak",
-    "Автомобиль": "araba",
-    "Не важно": "farketmez"
-};
-
 const INTERESTS_MAP: Record<string, string> = {
     "Культура": "kultur",
     "Развлечения": "eglence",
@@ -37,7 +31,6 @@ export default function RouteForm() {
     const [days, setDays] = useState("3");
     const [travelers, setTravelers] = useState("");
     const [interests, setInterests] = useState<string[]>([]);
-    const [transport, setTransport] = useState("");
     const [budget, setBudget] = useState("orta");
     const [loadingMessage, setLoadingMessage] = useState("");
     const [normalLoading, setNormalLoading] = useState(false);
@@ -164,7 +157,7 @@ export default function RouteForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!city || !travelers || !transport || interests.length === 0) {
+        if (!city || !travelers || interests.length === 0) {
             alert("Lütfen tüm alanları doldurun!");
             return;
         }
@@ -197,7 +190,7 @@ export default function RouteForm() {
         try {
             // Backend'e gönderilecek verileri hazırla
             const travelersValue = TRAVELERS_MAP[travelers] || "yalniz";
-            const transportValue = TRANSPORT_MAP[transport] || "yuruyerek";
+            const transportValue = "farketmez";
             const interestsValues = interests.map(i => INTERESTS_MAP[i] || i.toLowerCase());
 
             console.log("📤 API'ye gönderilen veriler:", {
@@ -399,28 +392,6 @@ export default function RouteForm() {
                                 }`}
                         >
                             {interest}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Ulaşım */}
-            <div className="mb-8">
-                <label className="block mb-3 text-sm font-semibold text-gray-700">
-                    Как будете добираться?
-                </label>
-                <div className="flex gap-3">
-                    {["Самолет", "Автомобиль", "Не важно"].map((option) => (
-                        <button
-                            key={option}
-                            type="button"
-                            onClick={() => setTransport(option)}
-                            className={`flex-1 py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${transport === option
-                                ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-105"
-                                : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
-                                }`}
-                        >
-                            {option === "Самолет" ? "✈️ Самолет" : option === "Автомобиль" ? "🚗 Автомобиль" : "🤷 Не важно"}
                         </button>
                     ))}
                 </div>
