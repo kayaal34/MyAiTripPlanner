@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MapPin, Lock, X, Sparkles } from 'lucide-react';
+import React, { memo, useCallback, useState } from 'react';
+import { MapPin, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
 
-// Mock Data - 12 Şehir (5 Ücretsiz + 7 Premium)
+// Mock Data - Genişletilmiş şehir listesi
 interface City {
   id: string;
   name: string;
@@ -11,120 +10,290 @@ interface City {
   imageUrl: string;
   description: string;
   placesToSee: string[];
-  isPremium: boolean;
 }
 
+const FALLBACK_CITY_IMAGE = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1200&q=80';
+
 const cities: City[] = [
-  // Ücretsiz Şehirler (isPremium: false)
-  {
-    id: 'paris',
-    name: 'Paris',
-    country: 'Fransa',
-    imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80',
-    description: 'Aşk şehri Paris, Eyfel Kulesi ve Louvre ile dünyanın en romantik destinasyonu.',
-    placesToSee: ['Eyfel Kulesi', 'Louvre Müzesi', 'Notre-Dame Katedrali', 'Champs-Élysées', 'Sacré-Cœur'],
-    isPremium: false
-  },
-  {
-    id: 'rome',
-    name: 'Roma',
-    country: 'İtalya',
-    imageUrl: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&q=80',
-    description: 'Antik Roma\'nın kalbi, Kolezyum ve tarihi kalıntılarıyla büyüleyici bir şehir.',
-    placesToSee: ['Kolezyum', 'Vatikan Müzeleri', 'Trevi Çeşmesi', 'Pantheon', 'İspanyol Merdivenleri'],
-    isPremium: false
-  },
-  {
-    id: 'tokyo',
-    name: 'Tokyo',
-    country: 'Japonya',
-    imageUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80',
-    description: 'Gelenek ve modernliğin buluştuğu şehir, neon ışıkları ve tapınakları ile büyüleyici.',
-    placesToSee: ['Tokyo Tower', 'Senso-ji Tapınağı', 'Shibuya Geçidi', 'Meiji Tapınağı', 'Akihabara'],
-    isPremium: false
-  },
-  {
-    id: 'newyork',
-    name: 'New York',
-    country: 'ABD',
-    imageUrl: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&q=80',
-    description: 'Hiç uyumayan şehir, Times Square ve Central Park ile dünyanın kültür merkezi.',
-    placesToSee: ['Özgürlük Heykeli', 'Times Square', 'Central Park', 'Brooklyn Köprüsü', 'Empire State'],
-    isPremium: false
-  },
   {
     id: 'istanbul',
     name: 'İstanbul',
     country: 'Türkiye',
     imageUrl: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800&q=80',
-    description: 'İki kıtanın buluştuğu eşsiz şehir, tarihi ve kültürüyle büyüleyici.',
-    placesToSee: ['Ayasofya', 'Sultanahmet Camii', 'Topkapı Sarayı', 'Kapalıçarşı', 'Galata Kulesi'],
-    isPremium: false
+    description: 'Tarihi yarımada ve Boğaz manzarasıyla eşsiz bir şehir.',
+    placesToSee: ['Ayasofya', 'Topkapı Sarayı', 'Galata Kulesi'],
   },
-  
-  // Premium Şehirler (isPremium: true)
   {
-    id: 'barcelona',
-    name: 'Barcelona',
-    country: 'İspanya',
-    imageUrl: 'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800&q=80',
-    description: 'Gaudi\'nin şaheserleri ve plajlarıyla Akdeniz\'in incisi.',
-    placesToSee: ['Sagrada Familia', 'Park Güell', 'La Rambla', 'Casa Batlló', 'Camp Nou'],
-    isPremium: true
+    id: 'antalya',
+    name: 'Antalya',
+    country: 'Türkiye',
+    imageUrl: 'https://images.unsplash.com/photo-1582634578140-83f53f3f9f8f?w=800&q=80',
+    description: 'Akdeniz kıyıları ve sıcak iklimiyle popüler tatil rotası.',
+    placesToSee: ['Kaleiçi', 'Düden Şelalesi', 'Konyaaltı Plajı'],
+  },
+  {
+    id: 'izmir',
+    name: 'İzmir',
+    country: 'Türkiye',
+    imageUrl: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&q=80',
+    description: 'Ege esintisi, kordon ve keyifli şehir yaşamı.',
+    placesToSee: ['Kordon', 'Saat Kulesi', 'Asansör'],
+  },
+  {
+    id: 'mugla',
+    name: 'Muğla',
+    country: 'Türkiye',
+    imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80',
+    description: 'Fethiye, Bodrum ve Marmaris hattının gözde merkezi.',
+    placesToSee: ['Akyaka', 'Ölüdeniz', 'Datça'],
+  },
+  {
+    id: 'roma',
+    name: 'Roma',
+    country: 'İtalya',
+    imageUrl: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&q=80',
+    description: 'Antik kalıntılar ve meydanlarla dolu tarih başkenti.',
+    placesToSee: ['Kolezyum', 'Trevi Çeşmesi', 'Pantheon'],
+  },
+  {
+    id: 'paris',
+    name: 'Paris',
+    country: 'Fransa',
+    imageUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80',
+    description: 'Sanat, moda ve romantik sokaklarıyla ikonik şehir.',
+    placesToSee: ['Eyfel Kulesi', 'Louvre', 'Montmartre'],
+  },
+  {
+    id: 'saraybosna',
+    name: 'Saraybosna',
+    country: 'Bosna Hersek',
+    imageUrl: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800&q=80',
+    description: 'Doğu ve batı kültürünün buluştuğu Balkan şehri.',
+    placesToSee: ['Başçarşı', 'Latin Köprüsü', 'Sarı Tabya'],
   },
   {
     id: 'dubai',
     name: 'Dubai',
     country: 'BAE',
     imageUrl: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=80',
-    description: 'Çöldeki mucize şehir, gökdelenler ve lüks alışverişin başkenti.',
-    placesToSee: ['Burj Khalifa', 'Dubai Mall', 'Palm Jumeirah', 'Dubai Marina', 'Gold Souk'],
-    isPremium: true
+    description: 'Modern siluet ve lüks deneyimleriyle öne çıkan destinasyon.',
+    placesToSee: ['Burj Khalifa', 'Dubai Marina', 'Palm Jumeirah'],
   },
   {
-    id: 'bali',
-    name: 'Bali',
-    country: 'Endonezya',
-    imageUrl: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80',
-    description: 'Tapınaklar adası, tropikal cennet ve yoga başkenti.',
-    placesToSee: ['Tanah Lot Tapınağı', 'Ubud Pirinç Tarlaları', 'Tegenungan Şelalesi', 'Seminyak Plajı'],
-    isPremium: true
+    id: 'trabzon',
+    name: 'Trabzon',
+    country: 'Türkiye',
+    imageUrl: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=800&q=80',
+    description: 'Karadeniz yaylaları ve doğasıyla huzurlu kaçış noktası.',
+    placesToSee: ['Sümela Manastırı', 'Uzungöl', 'Boztepe'],
   },
   {
-    id: 'santorini',
-    name: 'Santorini',
+    id: 'barselona',
+    name: 'Barselona',
+    country: 'İspanya',
+    imageUrl: 'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800&q=80',
+    description: 'Gaudi eserleri ve sahil hattıyla canlı Akdeniz şehri.',
+    placesToSee: ['Sagrada Familia', 'Park Güell', 'La Rambla'],
+  },
+  {
+    id: 'amsterdam',
+    name: 'Amsterdam',
+    country: 'Hollanda',
+    imageUrl: 'https://images.unsplash.com/photo-1534351590666-13e3e96b5017?w=800&q=80',
+    description: 'Kanallar, bisiklet kültürü ve sanatla dolu şehir.',
+    placesToSee: ['Dam Meydanı', 'Van Gogh Müzesi', 'Rijksmuseum'],
+  },
+  {
+    id: 'tiflis',
+    name: 'Tiflis',
+    country: 'Gürcistan',
+    imageUrl: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&q=80',
+    description: 'Tarihi sokakları ve termal hamamlarıyla özgün rota.',
+    placesToSee: ['Narikala', 'Old Tbilisi', 'Rustaveli'],
+  },
+  {
+    id: 'moskova',
+    name: 'Moskova',
+    country: 'Rusya',
+    imageUrl: 'https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800&q=80',
+    description: 'Kızıl Meydan ve ikonik mimariyle güçlü bir metropol.',
+    placesToSee: ['Kızıl Meydan', 'Kremlin', 'Arbat'],
+  },
+  {
+    id: 'berlin',
+    name: 'Berlin',
+    country: 'Almanya',
+    imageUrl: 'https://images.unsplash.com/photo-1560969184-10fe8719e047?w=800&q=80',
+    description: 'Tarih, gece hayatı ve yaratıcı kültürün merkezi.',
+    placesToSee: ['Brandenburg Kapısı', 'Berlin Duvarı', 'Museum Island'],
+  },
+  {
+    id: 'atina',
+    name: 'Atina',
     country: 'Yunanistan',
-    imageUrl: 'https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=800&q=80',
-    description: 'Beyaz evler ve mavi kubbeler, Ege\'nin cennet köşesi.',
-    placesToSee: ['Oia Gün Batımı', 'Fira Kasabası', 'Kırmızı Plaj', 'Akrotiri Antik Kenti'],
-    isPremium: true
+    imageUrl: 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=800&q=80',
+    description: 'Antik kalıntılarla modern şehir hayatını birleştirir.',
+    placesToSee: ['Akropolis', 'Plaka', 'Syntagma'],
   },
   {
-    id: 'prague',
-    name: 'Prag',
-    country: 'Çek Cumhuriyeti',
-    imageUrl: 'https://images.unsplash.com/photo-1541849546-216549ae216d?w=800&q=80',
-    description: 'Orta Çağ\'dan kalma şato ve köprülerle masalsı bir şehir.',
-    placesToSee: ['Prag Şatosu', 'Charles Köprüsü', 'Eski Kent Meydanı', 'Astronomik Saat'],
-    isPremium: true
+    id: 'sanliurfa',
+    name: 'Şanlıurfa',
+    country: 'Türkiye',
+    imageUrl: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=800&q=80',
+    description: 'Göbeklitepe ve tarihi atmosferiyle kültür rotası.',
+    placesToSee: ['Balıklıgöl', 'Göbeklitepe', 'Urfa Kalesi'],
   },
   {
-    id: 'venice',
+    id: 'gaziantep',
+    name: 'Gaziantep',
+    country: 'Türkiye',
+    imageUrl: 'https://images.unsplash.com/photo-1452570053594-1b985d6ea890?w=800&q=80',
+    description: 'Lezzet durakları ve zengin mutfak kültürüyle ünlü.',
+    placesToSee: ['Zeugma Müzesi', 'Bakırcılar Çarşısı', 'Kale'],
+  },
+  {
+    id: 'venedik',
     name: 'Venedik',
     country: 'İtalya',
     imageUrl: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=800&q=80',
-    description: 'Kanallar şehri, gondollar ve San Marco Meydanı ile romantik bir kaçış.',
-    placesToSee: ['San Marco Meydanı', 'Rialto Köprüsü', 'Canal Grande', 'Doge Sarayı'],
-    isPremium: true
+    description: 'Kanalları ve gondol turlarıyla romantik şehir deneyimi.',
+    placesToSee: ['San Marco', 'Rialto', 'Grand Canal'],
   },
   {
-    id: 'maldives',
-    name: 'Maldivler',
-    country: 'Maldivler',
-    imageUrl: 'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&q=80',
-    description: 'Tropikal cennet adaları, turkuaz sular ve lüks villaların adresi.',
-    placesToSee: ['Maafushi Adası', 'Mercan Resifleri', 'Bioluminescent Plaj', 'Male Şehri'],
-    isPremium: true
+    id: 'londra',
+    name: 'Londra',
+    country: 'İngiltere',
+    imageUrl: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&q=80',
+    description: 'Kültür, müze ve klasik şehir siluetiyle dünya metropolü.',
+    placesToSee: ['Big Ben', 'London Eye', 'Tower Bridge'],
+  },
+  {
+    id: 'bodrum',
+    name: 'Bodrum',
+    country: 'Türkiye',
+    imageUrl: 'https://images.unsplash.com/photo-1521295121783-8a321d551ad2?w=800&q=80',
+    description: 'Beyaz evleri, marinası ve canlı gece hayatıyla popüler.',
+    placesToSee: ['Bodrum Kalesi', 'Marina', 'Yalıkavak'],
+  },
+  {
+    id: 'mardin',
+    name: 'Mardin',
+    country: 'Türkiye',
+    imageUrl: 'https://images.unsplash.com/photo-1518991791750-749b7d5ef71d?w=800&q=80',
+    description: 'Taş mimarisi ve Mezopotamya manzarasıyla eşsiz şehir.',
+    placesToSee: ['Eski Mardin', 'Deyrulzafaran', 'Zinciriye'],
+  },
+  {
+    id: 'lizbon',
+    name: 'Lizbon',
+    country: 'Portekiz',
+    imageUrl: 'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=800&q=80',
+    description: 'Renkli tramvayları ve tepe manzaralarıyla keyifli rota.',
+    placesToSee: ['Alfama', 'Belem', 'Rossio'],
+  },
+  {
+    id: 'uskup',
+    name: 'Üsküp',
+    country: 'Kuzey Makedonya',
+    imageUrl: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800&q=80',
+    description: 'Taş Köprü ve çarşı kültürüyle Balkanların dikkat çeken şehri.',
+    placesToSee: ['Taş Köprü', 'Eski Çarşı', 'Vodna'],
+  },
+  {
+    id: 'newyork',
+    name: 'New York',
+    country: 'ABD',
+    imageUrl: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&q=80',
+    description: 'Hiç uyumayan şehirde kültür, sanat ve enerji bir arada.',
+    placesToSee: ['Times Square', 'Central Park', 'Brooklyn Bridge'],
+  },
+  {
+    id: 'ankara',
+    name: 'Ankara',
+    country: 'Türkiye',
+    imageUrl: 'https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800&q=80',
+    description: 'Başkent atmosferi, müzeler ve düzenli şehir yaşamı.',
+    placesToSee: ['Anıtkabir', 'Hamamönü', 'Anadolu Medeniyetleri Müzesi'],
+  },
+  {
+    id: 'bursa',
+    name: 'Bursa',
+    country: 'Türkiye',
+    imageUrl: 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&q=80',
+    description: 'Uludağ, tarihi hanlar ve güçlü mutfak kültürüyle öne çıkar.',
+    placesToSee: ['Uludağ', 'Cumalıkızık', 'Koza Han'],
+  },
+  {
+    id: 'adana',
+    name: 'Adana',
+    country: 'Türkiye',
+    imageUrl: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?w=800&q=80',
+    description: 'Lezzet durakları ve nehir kıyısıyla sıcak bir şehir deneyimi.',
+    placesToSee: ['Taş Köprü', 'Sabancı Merkez Camii', 'Seyhan'],
+  },
+  {
+    id: 'madrid',
+    name: 'Madrid',
+    country: 'İspanya',
+    imageUrl: 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=800&q=80',
+    description: 'Meydanları, müzeleri ve canlı gece hayatıyla güçlü başkent.',
+    placesToSee: ['Puerta del Sol', 'Prado Müzesi', 'Retiro Parkı'],
+  },
+  {
+    id: 'vienna',
+    name: 'Viyana',
+    country: 'Avusturya',
+    imageUrl: 'https://images.unsplash.com/photo-1516550893885-98568267b71c?w=800&q=80',
+    description: 'Klasik müzik, saraylar ve zarif şehir dokusuyla ünlüdür.',
+    placesToSee: ['Schönbrunn', 'Stephansdom', 'Belvedere'],
+  },
+  {
+    id: 'budapest',
+    name: 'Budapeşte',
+    country: 'Macaristan',
+    imageUrl: 'https://images.unsplash.com/photo-1549877452-9c387954fbc2?w=800&q=80',
+    description: 'Tuna kıyısı, tarihi hamamlar ve köprüleriyle etkileyici şehir.',
+    placesToSee: ['Parlamento Binası', 'Zincir Köprü', 'Buda Kalesi'],
+  },
+  {
+    id: 'prag',
+    name: 'Prag',
+    country: 'Çekya',
+    imageUrl: 'https://images.unsplash.com/photo-1541849546-216549ae216d?w=800&q=80',
+    description: 'Masalsı sokakları ve köprüleriyle Avrupa klasiği.',
+    placesToSee: ['Charles Köprüsü', 'Eski Şehir Meydanı', 'Prag Kalesi'],
+  },
+  {
+    id: 'seoul',
+    name: 'Seul',
+    country: 'Güney Kore',
+    imageUrl: 'https://images.unsplash.com/photo-1538485399081-7c897b1f1d9b?w=800&q=80',
+    description: 'Teknoloji, gelenek ve hızlı şehir yaşamını bir arada sunar.',
+    placesToSee: ['Gyeongbokgung', 'Myeongdong', 'N Seoul Tower'],
+  },
+  {
+    id: 'singapore',
+    name: 'Singapur',
+    country: 'Singapur',
+    imageUrl: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=800&q=80',
+    description: 'Temiz şehir düzeni ve modern mimarisiyle dikkat çeker.',
+    placesToSee: ['Marina Bay Sands', 'Gardens by the Bay', 'Sentosa'],
+  },
+  {
+    id: 'baku',
+    name: 'Bakü',
+    country: 'Azerbaycan',
+    imageUrl: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80',
+    description: 'Hazar kıyısı, modern kuleler ve eski şehir dokusu bir arada.',
+    placesToSee: ['İçerişehir', 'Alev Kuleleri', 'Bulvar'],
+  },
+  {
+    id: 'belgrade',
+    name: 'Belgrad',
+    country: 'Sırbistan',
+    imageUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&q=80',
+    description: 'Nehir kıyısı, tarihi kale ve canlı sosyal hayatıyla öne çıkar.',
+    placesToSee: ['Kalemegdan', 'Skadarlija', 'Knez Mihailova'],
   }
 ];
 
@@ -134,16 +303,22 @@ interface CityDetailModalProps {
   onClose: () => void;
 }
 
-const CityDetailModal: React.FC<CityDetailModalProps> = ({ city, onClose }) => {
+const CityDetailModal = memo(function CityDetailModal({ city, onClose }: CityDetailModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-      <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fadeIn will-change-opacity">
+      <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-slideUp will-change-transform">
         {/* Header Image */}
         <div className="relative h-80 overflow-hidden rounded-t-3xl">
           <img
             src={city.imageUrl}
             alt={city.name}
             className="w-full h-full object-cover"
+            decoding="async"
+            onError={(e) => {
+              const target = e.currentTarget;
+              target.onerror = null;
+              target.src = FALLBACK_CITY_IMAGE;
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
           
@@ -194,166 +369,73 @@ const CityDetailModal: React.FC<CityDetailModalProps> = ({ city, onClose }) => {
       </div>
     </div>
   );
-};
+});
 
-// Modal Component - Premium Uyarısı (Kilitli Şehirler İçin)
-interface PremiumUpsellModalProps {
-  onClose: () => void;
+interface CityCardProps {
+  city: City;
+  onSelect: (city: City) => void;
 }
 
-const PremiumUpsellModal: React.FC<PremiumUpsellModalProps> = ({ onClose }) => {
-  const navigate = useNavigate();
-
+const CityCard = memo(function CityCard({ city, onSelect }: CityCardProps) {
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
-      <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-white rounded-3xl max-w-lg w-full p-8 shadow-2xl animate-slideUp relative">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 bg-white/80 hover:bg-white p-2 rounded-full transition-all shadow-md"
-        >
-          <X className="w-5 h-5 text-gray-800" />
-        </button>
+    <div
+      className="relative group rounded-[10px] overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+      onClick={() => onSelect(city)}
+    >
+      <div className="relative h-40 md:h-44 overflow-hidden">
+        <img
+          src={city.imageUrl}
+          alt={city.name}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
+          decoding="async"
+          onError={(e) => {
+            const target = e.currentTarget;
+            target.onerror = null;
+            target.src = FALLBACK_CITY_IMAGE;
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
 
-        {/* Lock Icon */}
-        <div className="flex justify-center mb-6">
-          <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-6 rounded-full shadow-xl">
-            <Lock className="w-16 h-16 text-white" />
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="text-center">
-          <h2 className="text-4xl font-extrabold text-gray-800 mb-4">
-            Premium İçerik Kilitli 🔒
-          </h2>
-          <p className="text-lg text-gray-700 mb-8 leading-relaxed">
-            Tüm dünyayı keşfetmek için <span className="font-bold text-purple-700">Premium plan</span> kilidini açın.
-            <br />
-            50+ özel rota, yerel ipuçları ve sınırsız seyahat planı sizi bekliyor!
-          </p>
-
-          {/* Features */}
-          <div className="bg-white/80 rounded-2xl p-6 mb-8 text-left space-y-4">
-            <div className="flex items-center gap-4">
-              <Sparkles className="w-8 h-8 text-purple-600 flex-shrink-0" />
-              <div>
-                <p className="font-bold text-gray-800">50+ Premium Şehir</p>
-                <p className="text-sm text-gray-600">Dünyanın gizli köşelerini keşfedin</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <MapPin className="w-8 h-8 text-pink-600 flex-shrink-0" />
-              <div>
-                <p className="font-bold text-gray-800">Yerel Rehber İpuçları</p>
-                <p className="text-sm text-gray-600">Turistik olmayan yerler ve sırlar</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-                ∞
-              </div>
-              <div>
-                <p className="font-bold text-gray-800">Sınırsız Seyahat Planı</p>
-                <p className="text-sm text-gray-600">Dilediğiniz kadar plan oluşturun</p>
-              </div>
-            </div>
-          </div>
-
-          {/* CTA Button */}
-          <button
-            onClick={() => {
-              onClose();
-              navigate('/pricing');
-            }}
-            className="w-full bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white py-4 rounded-2xl text-xl font-bold hover:scale-105 transition-transform duration-300 shadow-xl hover:shadow-purple-500/50"
-          >
-            Premium Al 🚀
-          </button>
-          
-          <p className="text-sm text-gray-500 mt-4">
-            Şimdi abone olun, dilediğiniz zaman iptal edin
-          </p>
+        <div className="absolute bottom-2 left-3 right-3">
+          <h3 className="text-[29px] leading-8 font-semibold text-white drop-shadow-sm truncate">
+            {city.name}
+          </h3>
         </div>
       </div>
     </div>
   );
-};
+});
 
 // Ana Sayfa Componenti
 const Destinations = () => {
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
-  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
-  const handleCityClick = (city: City) => {
-    if (city.isPremium) {
-      setShowPremiumModal(true);
-    } else {
-      setSelectedCity(city);
-    }
-  };
+  const handleCityClick = useCallback((city: City) => {
+    setSelectedCity(city);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-[#f7f7f8] font-sans">
       <Navbar />
       
-      <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-8 pt-28 pb-14">
         
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl md:text-6xl font-extrabold mb-4 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent">
-            Tatil Şehirleri 🌍
+        <div className="text-center mb-10">
+          <h1 className="text-[40px] leading-tight md:text-[52px] font-semibold text-[#222a38] mb-4">
+            Tatil Şehirleri
           </h1>
-          <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-            Dünyanın en güzel şehirlerini keşfedin. 
-            <span className="font-semibold text-purple-700"> Premium ile tüm dünya sizin!</span>
+          <p className="text-[18px] leading-7 text-[#6b7280] max-w-4xl mx-auto font-normal">
+            Hayalinizdeki geziyi planlamak için populer şehirlerden birini seçin.
+            Tek tıkla şehir detaylarını inceleyip gezinizi planlamaya başlayın.
           </p>
         </div>
 
-        {/* Kompakt Grid - 7 Sütun */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4">
+        {/* Kompakt Şehir Grid'i */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
           {cities.map((city) => (
-            <div
-              key={city.id}
-              className="relative group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
-              onClick={() => handleCityClick(city)}
-            >
-              {/* City Image */}
-              <div className="relative h-48 overflow-hidden">
-                <img
-                  src={city.imageUrl}
-                  alt={city.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                
-                {/* City Name on Image */}
-                <div className="absolute bottom-2 left-2 right-2">
-                  <h3 className="text-xl font-bold text-white truncate">{city.name}</h3>
-                  <p className="text-white/80 text-xs truncate">{city.country}</p>
-                </div>
-              </div>
-
-              {/* Card Content */}
-              <div className="p-3">
-                <p className="text-gray-700 text-sm line-clamp-2 mb-3 min-h-[40px]">
-                  {city.description}
-                </p>
-                
-                <button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-2 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-pink-700 transition-all">
-                  Şehri Keşfet
-                </button>
-              </div>
-
-              {/* Premium Lock Overlay */}
-              {city.isPremium && (
-                <div className="absolute inset-0 backdrop-blur-sm bg-black/40 flex items-center justify-center">
-                  <div className="bg-white/90 p-4 rounded-full shadow-2xl">
-                    <Lock className="w-10 h-10 text-purple-600" />
-                  </div>
-                </div>
-              )}
-            </div>
+            <CityCard key={city.id} city={city} onSelect={handleCityClick} />
           ))}
         </div>
 
@@ -366,13 +448,6 @@ const Destinations = () => {
           onClose={() => setSelectedCity(null)}
         />
       )}
-
-      {showPremiumModal && (
-        <PremiumUpsellModal
-          onClose={() => setShowPremiumModal(false)}
-        />
-      )}
-
       {/* Animations CSS */}
       <style>{`
         @keyframes fadeIn {

@@ -118,6 +118,48 @@ export default function Home() {
                 <RouteForm />
             </div>
 
+            {/* 📝 BİLGİLENDİRME METNİ */}
+            <section className="w-full max-w-5xl mx-auto px-6 py-16">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-10 text-[#1f2937]">
+                    <h2 className="text-4xl md:text-5xl font-display font-semibold leading-tight mb-6">
+                        Mükemmel Tatil Planı Nasıl Yapılır?
+                        <br />
+                        Yapay Zeka Destekli Rehberiniz
+                    </h2>
+
+                    <p className="text-lg leading-8 text-gray-600 mb-8">
+                        Hayalinizdeki tatile çıkmak heyecan verici olsa da tatil planlama süreci çoğu zaman karmaşık olabilir.
+                        Otel, rota, restoran ve aktivite seçimi arasında kaybolmamak için akıllı bir plan şarttır.
+                        Modern tatil planlayıcı yaklaşımı ile tüm süreci daha hızlı, daha net ve daha keyifli hale getirebilirsiniz.
+                    </p>
+
+                    <h3 className="text-3xl font-display font-semibold mb-4">Adım Adım Kusursuz Tatil Planı</h3>
+                    <ol className="list-decimal list-inside space-y-4 text-lg text-gray-700 leading-8 mb-8">
+                        <li><span className="font-semibold">Hayal Kurun ve Karar Verin:</span> Tatilinizi kültür, doğa, deniz veya gastronomi temasıyla netleştirin.</li>
+                        <li><span className="font-semibold">Bütçe ve Süreyi Belirleyin:</span> Gün sayısına göre ulaşım, konaklama ve günlük harcama dengesini oluşturun.</li>
+                        <li><span className="font-semibold">Rota ve Aktiviteleri Planlayın:</span> Görülecek yerleri gün bazında gruplayarak zaman kaybını azaltın.</li>
+                        <li><span className="font-semibold">Rezervasyonları Tamamlayın:</span> Uçak, otel ve popüler etkinlikleri erken ayarlayarak avantaj sağlayın.</li>
+                    </ol>
+
+                    <h3 className="text-3xl font-display font-semibold mb-4">Geleceğin Çözümü: Tatil Planı Yapay Zeka Teknolojisi</h3>
+                    <p className="text-lg leading-8 text-gray-600 mb-6">
+                        Tatil planlama uygulamamız; şehir seçimi, bütçe, ilgi alanı ve gün sayınızı analiz ederek size özel bir rota önerir.
+                        Böylece saatler süren araştırma yerine dakikalar içinde uygulanabilir bir plan elde edersiniz.
+                    </p>
+
+                    <blockquote className="border-l-4 border-gray-200 pl-4 italic text-2xl leading-10 text-gray-800 mb-8">
+                        "İyi bir tatil planı, tatilin kendisi kadar keyifli olmalı. Akıllı planlama ile yükünüz azalır,
+                        size sadece seyahatin tadını çıkarmak kalır."
+                    </blockquote>
+
+                    <h3 className="text-3xl font-display font-semibold mb-4">İlham Veren Tatil Planı Örnekleri</h3>
+                    <ul className="space-y-4 text-lg text-gray-700 leading-8">
+                        <li><span className="font-semibold">3 Günlük Kapadokya Planı:</span> Balon turu, Göreme hattı ve yerel lezzetlerle kısa ama dolu bir rota.</li>
+                        <li><span className="font-semibold">1 Haftalık Ege Planı:</span> İzmir, Çeşme, Alaçatı, Bodrum çizgisinde deniz ve tarih dengesini kuran program.</li>
+                    </ul>
+                </div>
+            </section>
+
             {/* 🗺️ HARITA VE RASTGELE ÜNLÜ YERLER */}
             <div className="w-full max-w-7xl mx-auto px-6 py-16">
                 <div className="mb-8 text-center">

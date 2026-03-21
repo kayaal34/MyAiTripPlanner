@@ -5,7 +5,7 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Poppins', 'sans-serif'],
-                display: ['Manrope', 'sans-serif'],
+                display: ['Poppins', 'sans-serif'],
             },
             colors: {
                 primary: {
