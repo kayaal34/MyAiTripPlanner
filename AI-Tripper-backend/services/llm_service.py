@@ -103,45 +103,45 @@ async def generate_detailed_trip_itinerary(trip_data: dict):
         # Ülke bilgilerini al (REST Countries API)
         country_context, country_flag = await get_country_context(city)
         
-        interests_text = ", ".join(interests) if interests else "genel turizm"
+        interests_text = ", ".join(interests) if interests else "общий туризм"
         
-        # Bütçe aralıkları (örnek, para birimi şehre göre değişebilir)
+        # Бюджетные диапазоны (пример, валюта может варьироваться по городам)
         budget_ranges = {
-            "ekonomik": "ekonomik (günlük 500-1000 TL bütçe)",
-            "orta": "orta seviye (günlük 1000-2500 TL bütçe)",
-            "luks": "lüks (günlük 2500+ TL bütçe)"
+            "ekonomik": "экономичный (суточный бюджет 500-1000 TL)",
+            "orta": "средний (суточный бюджет 1000-2500 TL)",
+            "luks": "люкс (суточный бюджет 2500+ TL)"
         }
         budget_description = budget_ranges.get(budget.lower(), budget_ranges["orta"])
         
-        # Seyahat tipine göre özel talimatlar
+        # Специальные инструкции в зависимости от типа путешественника
         traveler_guides = {
-            "yalniz": "Solo gezginler için: sosyal mekanlar, güvenli rotalar, hostel/kafe önerileri, tek başına yapılabilir aktiviteler",
-            "cift": "Çiftler için: romantik restoranlar, gün batımı noktaları, mahrem atmosfer, çift aktiviteleri (spa, şarap tadımı)",
-            "aile": "Aileler için: çocuk dostu restoranlar, eğitici ve eğlenceli aktiviteler, güvenli alanlar, oyun parkları, ekonomik seçenekler",
-            "arkadaslar": "Arkadaş grupları için: gece hayatı, grup aktiviteleri (escape room, bowling), sosyal mekanlar, macera sporları"
+            "yalniz": "Для одиноких путешественников: общественные места, безопасные маршруты, рекомендации хостелей/кафе, мероприятия для одного человека",
+            "cift": "Для пар: романтичные рестораны, места заката, интимная атмосфера, парные экскурсии (спа, дегустация вина)",
+            "aile": "Для семей: рестораны для детей, образовательные и развлекательные мероприятия, безопасные места, парки, экономичные варианты",
+            "arkadaslar": "Для групп друзей: ночная жизнь, групповые мероприятия (квест, боулинг), социальные места, экстремальные виды спорта"
         }
         traveler_context = traveler_guides.get(travelers.lower(), traveler_guides["yalniz"])
         
-        # Profesyonel Rehber Prompt (REST Countries API bilgileriyle zenginleştirildi)
+        # Профессиональный гид-подсказка (обогащена информацией из REST Countries API)
         prompt = f"""
-Sen {city} şehrinin en prestijli turist rehberisin. Gerçek mekanlar öner.
+Вы - самый престижный гид-туристический консультант города {city}. Рекомендуйте только реальные места.
 
 {country_context}
 
-Müşteri: {travelers}, Bütçe: {budget_description}, İlgi: {interests_text}, {days} gün.
+Клиент: {travelers}, Бюджет: {budget_description}, Интересы: {interests_text}, {days} дней.
 
-⚠️ ÖNEMLİ JSON KURALLARI:
-1. Tüm açıklamalar MAKSIMUM 80 karakter olmalı
-2. Türkçe karakterler kullanabilirsin ama tırnak işaretlerinde dikkatli ol
-3. Gerçek mekan isimleri kullan (jenerik isimler yasak)
-4. Her string değeri çift tırnak içinde olmalı
+⚠️ КРИТИЧЕСКИЕ ПРАВИЛА JSON:
+1. Все описания МАКСИМУМ 80 символов
+2. Используйте русские символы, но будьте внимательны с кавычками
+3. Используйте только реальные названия мест (запрещены обобщённые названия)
+4. Каждое строковое значение должно быть в двойных кавычках
 
-⚠️ GENERAL_TIPS İÇİN KRİTİK TALİMATLAR:
-- local_customs: {city}'e özgü GERÇEK kültürel normlar, görgü kuralları, yasaklar, davranış biçimleri
-- safety: {city} için SPESİFİK güvenlik tavsiyeleri, kaçınılması gereken bölgeler, dikkat edilmesi gerekenler
-- money: Para birimi detayları, ATM ücretleri, kredi kartı kabul oranı, bahşiş kültürü, döviz büroları
-- emergency_contacts: {city}'deki GERÇEK acil durum telefonları (polis, ambulans, itfaiye, turist polisi varsa)
-- useful_phrases: Yerel dilde 6-8 KULLANIŞLI ifade (selamlaşma, teşekkür, yardım, fiyat sorma, yön sorma vb.)
+⚠️ КРИТИЧЕСКИЕ ИНСТРУКЦИИ ДЛЯ GENERAL_TIPS:
+- local_customs: СПЕЦИФИЧНЫЕ для {city} культурные нормы, этикет, запреты, нормы поведения
+- safety: СПЕЦИФИЧНЫЕ советы по безопасности для {city} (безопасные/опасные районы, техники мошенничества, статус полиции)
+- money: Детали валюты, комиссии банкоматов, возможность оплаты кредитной картой, культура чаевых, обмен валюты
+- emergency_contacts: РЕАЛЬНЫЕ номера аварийных служб {city} (полиция, скорая помощь, пожарная служба, туристическая полиция если есть)
+- useful_phrases: 6-8 ПОЛЕЗНЫХ фраз на местном языке (приветствие, спасибо, помощь, цена, направление и т.д.)
 
 SADECE AŞAĞIDAKİ JSON FORMATINDA CEVAP VER:
 
@@ -149,116 +149,116 @@ SADECE AŞAĞIDAKİ JSON FORMATINDA CEVAP VER:
   "trip_summary": {{
     "destination": "{city}",
     "duration_days": {days},
-    "total_estimated_cost": "Örn: 15.000 TL",
-    "best_season": "Örn: İlkbahar",
-    "weather_forecast": "Örn: Güneşli ve ılık"
+    "total_estimated_cost": "Прим: 15.000 TL",
+    "best_season": "Прим: Весна",
+    "weather_forecast": "Прим: Солнечно и тепло"
   }},
   "daily_itinerary": [
     {{
       "day": 1,
-      "title": "Güne yaratıcı bir başlık",
+      "title": "Творческое название дня",
       "morning": {{
         "time": "09:00-12:00",
         "activities": [
           {{
-            "name": "Gerçek Mekan İsmi",
+            "name": "Реальное название места",
             "type": "museum",
-            "address": "Gerçek Adres veya Semt",
+            "address": "Реальный адрес или район",
             "coordinates": {{"lat": 41.0122, "lng": 28.9760}},
-            "duration": "2 saat",
+            "duration": "2 часа",
             "cost": "200 TL",
-            "description": "Kısa açıklama (max 80 karakter)",
-            "tips": "İpucu (max 60 karakter)"
+            "description": "Краткое описание (макс 80 символов)",
+            "tips": "Совет (макс 60 символов)"
           }}
         ]
       }},
       "lunch": {{
         "time": "12:00-14:00",
         "restaurant": {{
-          "name": "Gerçek Restoran İsmi",
-          "address": "Gerçek Adres",
+          "name": "Реальное название ресторана",
+          "address": "Реальный адрес",
           "coordinates": {{"lat": 41.0130, "lng": 28.9770}},
-          "cuisine": "Mutfak tipi",
-          "average_cost": "Kişi başı maliyet",
-          "recommended_dishes": ["Yemek 1", "Yemek 2"],
-          "description": "Kısa açıklama (max 60 karakter)"
+          "cuisine": "Тип кухни",
+          "average_cost": "Стоимость на человека",
+          "recommended_dishes": ["Блюдо 1", "Блюдо 2"],
+          "description": "Краткое описание (макс 60 символов)"
         }}
       }},
       "afternoon": {{
         "time": "14:00-18:00",
         "activities": [
           {{
-            "name": "Gerçek Mekan",
+            "name": "Реальное место",
             "type": "cultural",
-            "address": "Gerçek Adres",
+            "address": "Реальный адрес",
             "coordinates": {{"lat": 41.0140, "lng": 28.9780}},
-            "duration": "3 saat",
-            "cost": "Maliyet",
-            "description": "Kısa açıklama (max 60 karakter)"
+            "duration": "3 часа",
+            "cost": "Стоимость",
+            "description": "Краткое описание (макс 60 символов)"
           }}
         ]
       }},
       "evening": {{
         "time": "18:00-22:00",
         "dinner": {{
-          "name": "Gerçek Restoran",
-          "address": "Adres",
+          "name": "Реальный ресторан",
+          "address": "Адрес",
           "coordinates": {{"lat": 41.0150, "lng": 28.9790}},
-          "cuisine": "Mutfak",
-          "average_cost": "Maliyet",
-          "description": "Kısa açıklama (max 60 karakter)"
+          "cuisine": "Кухня",
+          "average_cost": "Стоимость",
+          "description": "Краткое описание (макс 60 символов)"
         }},
-        "night_activities": ["Aktivite 1", "Aktivite 2"]
+        "night_activities": ["Мероприятие 1", "Мероприятие 2"]
       }},
       "daily_tips": {{
-        "weather": "Hava durumu",
-        "clothing": "Giyim önerisi",
-        "estimated_daily_budget": "Günlük bütçe"
+        "weather": "Прогноз погоды",
+        "clothing": "Рекомендация по одежде",
+        "estimated_daily_budget": "Суточный бюджет"
       }},
       "transportation": {{
-        "getting_around": "Ulaşım",
-        "estimated_transport_cost": "Maliyet"
+        "getting_around": "Транспорт",
+        "estimated_transport_cost": "Стоимость"
       }}
     }}
   ],
   "accommodation_suggestions": [
     {{
-      "name": "Gerçek Otel İsmi",
+      "name": "Реальное название отеля",
       "type": "hotel",
-      "location": "Semt",
-      "price_range": "Fiyat",
-      "description": "Kısa açıklama (max 60 karakter)"
+      "location": "Район",
+      "price_range": "Цена",
+      "description": "Краткое описание (макс 60 символов)"
     }}
   ],
   "general_tips": {{
-    "local_customs": "{city}'e özgü GERÇEK kültürel kurallar ve görgü (örn: giyim, selamlaşma, din, bahşiş kültürü)",
-    "safety": "{city} için SPESİFİK güvenlik tavsiyeleri (güvenli/tehlikeli semtler, dolandırıcılık taktikleri, polis durumu)",
-    "money": "Para birimi: gerçek döviz büroları, ATM komisyonları, kredi kartı kabul yerleri, bahşiş oranları, pazarlık kültürü",
+    "local_customs": "РЕАЛЬНЫЕ культурные нормы и этикет города {city} (примеры: одежда, приветствия, религия, культура чаевых)",
+    "safety": "СПЕЦИФИЧЕСКИЕ советы по безопасности для {city} (безопасные/опасные районы, схемы мошенничества, статус полиции)",
+    "money": "Валюта: реальные пункты обмена, комиссии банкоматов, места, где принимают кредитные карты, процент чаевых, культура торга",
     "emergency_contacts": {{
-      "police": "{city} polis numarası (gerçek)",
-      "ambulance": "{city} ambulans numarası (gerçek)",
-      "fire": "{city} itfaiye numarası (gerçek)",
-      "tourist_police": "{city} turist polisi numarası (varsa gerçek, yoksa boş string)"
+      "police": "Номер полиции {city} (реальный)",
+      "ambulance": "Номер скорой помощи {city} (реальный)",
+      "fire": "Номер пожарной службы {city} (реальный)",
+      "tourist_police": "Номер туристической полиции {city} (если есть - реальный, иначе пустая строка)"
     }},
     "useful_phrases": [
-      "Merhaba - Yerel dilde karşılığı",
-      "Teşekkürler - Yerel dilde karşılığı",
-      "Lütfen - Yerel dilde karşılığı",
-      "Ne kadar? - Yerel dilde karşılığı",
-      "Yardım! - Yerel dilde karşılığı",
-      "Nerede? - Yerel dilde karşılığı"
+      "Привет - Эквивалент на местном языке",
+      "Спасибо - Эквивалент на местном языке",
+      "Пожалуйста - Эквивалент на местном языке",
+      "Сколько это стоит? - Эквивалент на местном языке",
+      "Помощь! - Эквивалент на местном языке",
+      "Где? - Эквивалент на местном языке"
     ]
   }},
-  "packing_list": ["Eşya 1", "Eşya 2", "Eşya 3"]
+  "packing_list": ["Предмет 1", "Предмет 2", "Предмет 3"]
 }}
 
-{days} gün için yukarıdaki JSON formatında plan oluştur.
+Создайте план на {days} дней в вышеуказанном формате JSON.
 
-KRİTİK: 
-- SADECE geçerli JSON döndür (açıklama, yorum ekleme)
-- Tüm açıklamalar 80 karakterden kısa olmalı
-- Gerçek mekan/restoran isimleri kullan
-- Koordinatlar gerçek olmalı
+КРИТИЧЕСКИе требования: 
+- ТОЛЬКО действительный JSON (без объяснений и комментариев)
+- Все описания короче 80 символов
+- Используйте только реальные названия мест/ресторанов
+- Координаты должны быть реальными
         """
         
         # Gemini API'sine asenkron istek gönder

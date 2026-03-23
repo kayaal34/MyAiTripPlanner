@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTripStore } from "../store/useTripStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { saveTripToFavorites } from "../services/api";
 import Navbar from "../components/Navbar";
 import { MapPin, Calendar, Users, DollarSign, Cloud, Coffee, UtensilsCrossed, Sun, Moon, Info, Hotel, AlertCircle, Phone, MessageSquare, Package, Heart, Save, ChevronDown } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 // Travelers mapping (İngilizce -> Rusça)
 const TRAVELERS_DISPLAY: Record<string, string> = {
@@ -24,20 +23,124 @@ const BUDGET_DISPLAY: Record<string, { label: string; color: string; emoji: stri
     "luks": { label: "Люкс", color: "text-purple-600", emoji: "💎" }
 };
 
-// Fix marker icon issue with Leaflet in Vite
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
+// Mapbox token - from environment variable only
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+if (!MAPBOX_TOKEN) {
+    console.warn('VITE_MAPBOX_ACCESS_TOKEN is not set in environment variables');
+}
+mapboxgl.accessToken = MAPBOX_TOKEN;
+
+// MapboxGL Map component for TripPlanResult
+function MapboxGLMapComponent({ center, places }: { center: [number, number]; places: any[] }) {
+    const mapContainer = useRef<HTMLDivElement>(null);
+    const map = useRef<mapboxgl.Map | null>(null);
+    const markersRef = useRef<mapboxgl.Marker[]>([]);
+    const placesRef = useRef(places);
+
+    // Keep places ref up to date
+    useEffect(() => {
+        placesRef.current = places;
+    }, [places]);
+
+    useEffect(() => {
+        if (!mapContainer.current || map.current) return;
+
+        map.current = new mapboxgl.Map({
+            container: mapContainer.current,
+            style: 'mapbox://styles/mapbox/streets-v12',
+            center: center,
+            zoom: 13,
+        });
+
+        map.current.on('load', () => {
+            // Add initial markers
+            addMarkers();
+        });
+
+        // ResizeObserver for responsive map
+        const resizeObserver = new ResizeObserver(() => {
+            if (map.current) {
+                map.current.resize();
+            }
+        });
+        resizeObserver.observe(mapContainer.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []);
+
+    const addMarkers = () => {
+        if (!map.current) return;
+
+        // Remove old markers
+        markersRef.current.forEach(marker => marker.remove());
+        markersRef.current = [];
+
+        // Add markers
+        placesRef.current.forEach((place) => {
+            const markerElement = document.createElement('div');
+            markerElement.style.width = '28px';
+            markerElement.style.height = '28px';
+            markerElement.style.background = '#ff3333';
+            markerElement.style.border = '2px solid white';
+            markerElement.style.borderRadius = '50%';
+            markerElement.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)';
+            markerElement.style.cursor = 'pointer';
+
+            const popup = new mapboxgl.Popup({
+                offset: [0, -10],
+                closeButton: true,
+                closeOnClick: false
+            });
+
+            popup.setHTML(`
+                <div class="p-3">
+                    <h3 class="font-bold text-gray-800 mb-1">📍 ${place.name}</h3>
+                    ${place.description ? `<p class="text-xs text-gray-600 mb-2"><strong>Описание:</strong> ${place.description}</p>` : ''}
+                    ${place.address ? `<p class="text-xs text-gray-500 mb-3"><strong>Адрес:</strong> ${place.address}</p>` : ''}
+                    <div class="flex gap-2 text-xs mt-3">
+                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name + (place.address ? ', ' + place.address : ''))}" target="_blank" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded font-semibold text-center">Google</a>
+                        <a href="https://yandex.com/maps/?text=${encodeURIComponent(place.name + (place.address ? ', ' + place.address : ''))}" target="_blank" class="flex-1 bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded font-semibold text-center">Yandex</a>
+                    </div>
+                </div>
+            `);
+
+            const marker = new mapboxgl.Marker({ element: markerElement })
+                .setLngLat([parseFloat(String(place.lng)), parseFloat(String(place.lat))])
+                .setPopup(popup)
+                .addTo(map.current!);
+
+            // Click handler
+            markerElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                popup.addTo(map.current!);
+            });
+
+            markersRef.current.push(marker);
+        });
+    };
+
+    // Update markers when places change (but map already exists)
+    useEffect(() => {
+        if (map.current && map.current.isStyleLoaded()) {
+            addMarkers();
+        }
+    }, [places]);
+
+    return (
+        <div className="h-[500px] w-full rounded-xl overflow-hidden mt-4">
+            <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
+        </div>
+    );
+}
 
 export default function TripPlanResult() {
     const navigate = useNavigate();
     const currentTripPlan = useTripStore((state) => state.currentTripPlan);
     const currentTripFormData = useTripStore((state) => state.currentTripFormData);
     const { token } = useAuthStore();
-    
+
     const [isSaving, setIsSaving] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [tripName, setTripName] = useState("");
@@ -112,8 +215,8 @@ export default function TripPlanResult() {
                     places.push({
                         id: `place-${placeId++}`,
                         name: activity.name,
-                        lat: activity.coordinates.lat,
-                        lng: activity.coordinates.lng,
+                        lat: parseFloat(String(activity.coordinates.lat)),
+                        lng: parseFloat(String(activity.coordinates.lng)),
                         address: activity.address || '',
                         description: activity.description || '',
                         day: day.day,
@@ -128,13 +231,13 @@ export default function TripPlanResult() {
                 places.push({
                     id: `place-${placeId++}`,
                     name: day.lunch.restaurant.name,
-                    lat: day.lunch.restaurant.coordinates.lat,
-                    lng: day.lunch.restaurant.coordinates.lng,
+                    lat: parseFloat(String(day.lunch.restaurant.coordinates.lat)),
+                    lng: parseFloat(String(day.lunch.restaurant.coordinates.lng)),
                     address: day.lunch.restaurant.address || '',
                     description: day.lunch.restaurant.description || day.lunch.restaurant.cuisine || '',
                     day: day.day,
                     timeSlot: `Öğle Yemeği - ${day.lunch.time}`,
-                    image: day.lunch.restaurant.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop'
+                    image: (day.lunch.restaurant as any)?.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop'
                 });
             }
 
@@ -144,8 +247,8 @@ export default function TripPlanResult() {
                     places.push({
                         id: `place-${placeId++}`,
                         name: activity.name,
-                        lat: activity.coordinates.lat,
-                        lng: activity.coordinates.lng,
+                        lat: parseFloat(String(activity.coordinates.lat)),
+                        lng: parseFloat(String(activity.coordinates.lng)),
                         address: activity.address || '',
                         description: activity.description || '',
                         day: day.day,
@@ -160,13 +263,13 @@ export default function TripPlanResult() {
                 places.push({
                     id: `place-${placeId++}`,
                     name: day.evening.dinner.name,
-                    lat: day.evening.dinner.coordinates.lat,
-                    lng: day.evening.dinner.coordinates.lng,
+                    lat: parseFloat(String(day.evening.dinner.coordinates.lat)),
+                    lng: parseFloat(String(day.evening.dinner.coordinates.lng)),
                     address: day.evening.dinner.address || '',
                     description: day.evening.dinner.description || day.evening.dinner.cuisine || '',
                     day: day.day,
                     timeSlot: `Akşam Yemeği - ${day.evening.time}`,
-                    image: day.evening.dinner.image || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=600&fit=crop'
+                    image: (day.evening.dinner as any)?.image || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=600&fit=crop'
                 });
             }
         });
@@ -176,12 +279,12 @@ export default function TripPlanResult() {
 
     // Harita merkezi (tüm yerlerin ortalaması)
     const mapCenter = useMemo<[number, number]>(() => {
-        if (allPlaces.length === 0) return [41.0082, 28.9784]; // İstanbul default
+        if (allPlaces.length === 0) return [28.9784, 41.0082]; // İstanbul default [lng, lat]
 
         const avgLat = allPlaces.reduce((sum, p) => sum + p.lat, 0) / allPlaces.length;
         const avgLng = allPlaces.reduce((sum, p) => sum + p.lng, 0) / allPlaces.length;
 
-        return [avgLat, avgLng];
+        return [avgLng, avgLat]; // Correct: [lng, lat]
     }, [allPlaces]);
 
     if (!currentTripPlan) {
@@ -297,105 +400,17 @@ export default function TripPlanResult() {
                             className="w-full flex items-center justify-between text-left hover:bg-gray-50 -m-6 p-6 rounded-2xl transition-colors"
                         >
                             <h2 className="text-3xl font-bold text-gray-800">🗺️ Маршрут на карте</h2>
-                            <ChevronDown 
-                                className={`w-8 h-8 text-gray-600 transition-transform duration-300 ${
-                                    isMapOpen ? 'rotate-180' : ''
-                                }`}
+                            <ChevronDown
+                                className={`w-8 h-8 text-gray-600 transition-transform duration-300 ${isMapOpen ? 'rotate-180' : ''
+                                    }`}
                             />
                         </button>
-                        
+
                         {isMapOpen && (
-                            <div className="h-[500px] w-full rounded-xl overflow-hidden mt-4">
-                                <MapContainer
+                            <MapboxGLMapComponent
                                 center={mapCenter}
-                                zoom={13}
-                                className="h-full w-full"
-                                zoomControl={true}
-                                scrollWheelZoom={true}
-                            >
-                                <TileLayer
-                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                                />
-
-                                {allPlaces.map((place, index) => (
-                                    <Marker
-                                        key={place.id || index}
-                                        position={[place.lat, place.lng]}
-                                    >
-                                        <Popup maxWidth={600} minWidth={450} className="custom-popup">
-                                            <div className="w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-lg">
-                                                {/* Görsel */}
-                                                <div className="relative w-full h-48 overflow-hidden">
-                                                    <img
-                                                        src={place.image || "https://images.unsplash.com/photo-1569949381669-ecf31ae8e613?w=800"}
-                                                        alt={place.name}
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            const target = e.target as HTMLImageElement;
-                                                            target.src = 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&h=600&fit=crop';
-                                                        }}
-                                                    />
-                                                    {place.day && (
-                                                        <div className="absolute top-3 left-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
-                                                            {place.day}. Gün
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* İçerik */}
-                                                <div className="p-4">
-                                                    <h3 className="text-lg font-bold text-gray-800 mb-2">
-                                                        {place.name}
-                                                    </h3>
-
-                                                    {place.timeSlot && (
-                                                        <div className="text-sm text-gray-600 mb-3">
-                                                            🕐 {place.timeSlot}
-                                                        </div>
-                                                    )}
-
-                                                    {place.description && (
-                                                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                                                            {place.description}
-                                                        </p>
-                                                    )}
-
-                                                    {place.address && (
-                                                        <p className="text-xs text-gray-500 mb-4 line-clamp-1">
-                                                            📍 {place.address}
-                                                        </p>
-                                                    )}
-
-                                                    {/* Butonlar */}
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                const query = encodeURIComponent(`${place.name}, ${place.address || ''}`);
-                                                                const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
-                                                                window.open(url, "_blank");
-                                                            }}
-                                                            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-colors"
-                                                        >
-                                                            Google Maps
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                const url = `https://yandex.com/maps/?pt=${place.lng},${place.lat}&z=15`;
-                                                                window.open(url, "_blank");
-                                                            }}
-                                                            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-3 rounded-lg text-sm transition-colors"
-                                                        >
-                                                            Yandex Maps
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </Popup>
-                                    </Marker>
-                                ))}
-                            </MapContainer>
-                        </div>
+                                places={allPlaces}
+                            />
                         )}
                     </div>
                 )}
@@ -577,17 +592,17 @@ export default function TripPlanResult() {
                                     <p className="text-gray-700">{general_tips.emergency_contacts}</p>
                                 ) : (
                                     <div className="text-sm text-gray-700 space-y-1">
-                                        {general_tips.emergency_contacts?.police && (
-                                            <p>🚓 Полиция: <span className="font-semibold">{general_tips.emergency_contacts.police}</span></p>
+                                        {(general_tips.emergency_contacts as any)?.police && (
+                                            <p>🚓 Полиция: <span className="font-semibold">{(general_tips.emergency_contacts as any).police}</span></p>
                                         )}
-                                        {general_tips.emergency_contacts?.ambulance && (
-                                            <p>🚑 Скорая помощь: <span className="font-semibold">{general_tips.emergency_contacts.ambulance}</span></p>
+                                        {(general_tips.emergency_contacts as any)?.ambulance && (
+                                            <p>🚑 Скорая помощь: <span className="font-semibold">{(general_tips.emergency_contacts as any).ambulance}</span></p>
                                         )}
-                                        {general_tips.emergency_contacts?.fire && (
-                                            <p>🚒 Пожарная: <span className="font-semibold">{general_tips.emergency_contacts.fire}</span></p>
+                                        {(general_tips.emergency_contacts as any)?.fire && (
+                                            <p>🚒 Пожарная: <span className="font-semibold">{(general_tips.emergency_contacts as any).fire}</span></p>
                                         )}
-                                        {general_tips.emergency_contacts?.tourist_police && (
-                                            <p>👮 Туристическая полиция: <span className="font-semibold">{general_tips.emergency_contacts.tourist_police}</span></p>
+                                        {(general_tips.emergency_contacts as any)?.tourist_police && (
+                                            <p>👮 Туристическая полиция: <span className="font-semibold">{(general_tips.emergency_contacts as any).tourist_police}</span></p>
                                         )}
                                     </div>
                                 )}

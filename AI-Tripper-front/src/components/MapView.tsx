@@ -1,34 +1,24 @@
-import { useMemo, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useTripStore } from "../store/useTripStore";
 import { famousPlaces } from "../data/famousPlaces";
 import type { FamousPlace } from "../data/famousPlaces";
 import FamousPlacePopup from "./FamousPlacePopup";
 import { Sparkles } from "lucide-react";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 
-// Fix marker icon issue with Leaflet in Vite
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-// Red marker icon for famous places
-const redIcon = new L.Icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-});
+// Mapbox token - from environment variable only
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+if (!MAPBOX_TOKEN) {
+    console.warn('VITE_MAPBOX_ACCESS_TOKEN is not set in environment variables');
+}
+mapboxgl.accessToken = MAPBOX_TOKEN;
 
 export default function MapView() {
     const places = useTripStore((state) => state.places);
     const [selectedFamousPlace, setSelectedFamousPlace] = useState<FamousPlace | null>(null);
+    const mapContainer = useRef<HTMLDivElement>(null);
+    const map = useRef<mapboxgl.Map | null>(null);
 
     const center = useMemo<[number, number]>(() => {
         if (selectedFamousPlace) {
@@ -51,6 +41,169 @@ export default function MapView() {
         setSelectedFamousPlace(null);
     };
 
+    const markersRef = useRef<mapboxgl.Marker[]>([]);
+    const placesRef = useRef(places);
+    const famousPlaceRef = useRef(selectedFamousPlace);
+
+    // Update refs when values change
+    useEffect(() => {
+        placesRef.current = places;
+        famousPlaceRef.current = selectedFamousPlace;
+    }, [places, selectedFamousPlace]);
+
+    // Initialize map once
+    useEffect(() => {
+        if (!mapContainer.current || map.current) return;
+
+        map.current = new mapboxgl.Map({
+            container: mapContainer.current,
+            style: 'mapbox://styles/mapbox/streets-v12',
+            center: [-74.5, 40],
+            zoom: 3.5,
+        });
+
+        map.current.on('load', () => {
+            addMarkers();
+        });
+
+        // ResizeObserver
+        const resizeObserver = new ResizeObserver(() => {
+            if (map.current) {
+                map.current.resize();
+            }
+        });
+        resizeObserver.observe(mapContainer.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []);
+
+    // Update markers when places or selectedFamousPlace changes
+    useEffect(() => {
+        if (!map.current || !map.current.isStyleLoaded()) return;
+        addMarkers();
+    }, [places, selectedFamousPlace]);
+
+    // Helper function to add markers
+    const addMarkers = () => {
+        if (!map.current) return;
+
+        // Remove old markers
+        markersRef.current.forEach(marker => marker.remove());
+        markersRef.current = [];
+
+        // Add user's trip places (blue markers)
+        placesRef.current.forEach((place) => {
+            const markerElement = document.createElement('div');
+            markerElement.style.width = '20px';
+            markerElement.style.height = '20px';
+            markerElement.style.background = 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)';
+            markerElement.style.borderRadius = '50%';
+            markerElement.style.border = '2px solid white';
+            markerElement.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+            markerElement.style.cursor = 'pointer';
+            markerElement.style.position = 'relative';
+            markerElement.style.display = 'flex';
+            markerElement.style.alignItems = 'center';
+            markerElement.style.justifyContent = 'center';
+
+            const innerDot = document.createElement('div');
+            innerDot.style.position = 'absolute';
+            innerDot.style.width = '3px';
+            innerDot.style.height = '3px';
+            innerDot.style.backgroundColor = 'white';
+            innerDot.style.borderRadius = '50%';
+            innerDot.style.zIndex = '10';
+            markerElement.appendChild(innerDot);
+
+            // Hover effect - shadow only, no scaling
+            markerElement.addEventListener('mouseenter', () => {
+                markerElement.style.boxShadow = '0 4px 10px rgba(0,0,0,0.4)';
+            });
+            markerElement.addEventListener('mouseleave', () => {
+                markerElement.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+            });
+
+            const popup = new mapboxgl.Popup({ offset: [0, -10] }).setText(place.name);
+            const marker = new mapboxgl.Marker({ element: markerElement })
+                .setLngLat([place.lng, place.lat])
+                .setPopup(popup)
+                .addTo(map.current!);
+
+            // Click handler - open popup
+            markerElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                marker.getPopup()?.addTo(map.current!);
+            });
+
+            markersRef.current.push(marker);
+        });
+
+        // Add famous place marker if selected (red marker)
+        if (famousPlaceRef.current) {
+            const famousMarkerElement = document.createElement('div');
+            famousMarkerElement.style.width = '24px';
+            famousMarkerElement.style.height = '24px';
+            famousMarkerElement.style.background = 'linear-gradient(135deg, #ff3333 0%, #cc0000 100%)';
+            famousMarkerElement.style.borderRadius = '50%';
+            famousMarkerElement.style.border = '2px solid white';
+            famousMarkerElement.style.boxShadow = '0 3px 8px rgba(0,0,0,0.4)';
+            famousMarkerElement.style.cursor = 'pointer';
+            famousMarkerElement.style.position = 'relative';
+            famousMarkerElement.style.display = 'flex';
+            famousMarkerElement.style.alignItems = 'center';
+            famousMarkerElement.style.justifyContent = 'center';
+
+            const innerDot = document.createElement('div');
+            innerDot.style.position = 'absolute';
+            innerDot.style.width = '4px';
+            innerDot.style.height = '4px';
+            innerDot.style.backgroundColor = 'white';
+            innerDot.style.borderRadius = '50%';
+            innerDot.style.zIndex = '10';
+            famousMarkerElement.appendChild(innerDot);
+
+            // Hover effect - shadow only, no scaling
+            famousMarkerElement.addEventListener('mouseenter', () => {
+                famousMarkerElement.style.boxShadow = '0 5px 12px rgba(0,0,0,0.5)';
+            });
+            famousMarkerElement.addEventListener('mouseleave', () => {
+                famousMarkerElement.style.boxShadow = '0 3px 8px rgba(0,0,0,0.4)';
+            });
+
+            const popup = new mapboxgl.Popup({ offset: [0, -15] }).setText(famousPlaceRef.current.nameRu);
+            const marker = new mapboxgl.Marker({ element: famousMarkerElement })
+                .setLngLat([famousPlaceRef.current.lng, famousPlaceRef.current.lat])
+                .setPopup(popup)
+                .addTo(map.current!);
+
+            // Click handler - open popup
+            famousMarkerElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                marker.getPopup()?.addTo(map.current!);
+            });
+
+            markersRef.current.push(marker);
+
+            // Fly to famous place
+            if (map.current) {
+                map.current.flyTo({
+                    center: [famousPlaceRef.current.lng, famousPlaceRef.current.lat],
+                    zoom: 8,
+                    duration: 1000
+                });
+            }
+        } else if (placesRef.current.length > 0 && map.current) {
+            // If no famous place selected, zoom to fit places
+            const bounds = new mapboxgl.LngLatBounds();
+            placesRef.current.forEach(place => {
+                bounds.extend([place.lng, place.lat]);
+            });
+            map.current.fitBounds(bounds, { padding: 40 });
+        }
+    };
+
     return (
         <div className="relative h-[520px] w-full rounded-3xl overflow-hidden bg-gray-100">
             {/* Main container with flex */}
@@ -60,112 +213,7 @@ export default function MapView() {
                     className={`transition-all duration-500 h-full rounded-2xl overflow-hidden ${selectedFamousPlace ? 'w-[calc(100%-500px)]' : 'w-full'
                         }`}
                 >
-                    <MapContainer
-                        center={center}
-                        zoom={selectedFamousPlace ? 8 : 13}
-                        className="h-full w-full"
-                        zoomControl={true}
-                        scrollWheelZoom={true}
-                        attributionControl={true}
-                        key={selectedFamousPlace ? `${selectedFamousPlace.id}` : 'default'}
-                    >
-                        <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        />
-
-                        {/* User's trip places */}
-                        {places.map((place, index) => (
-                            <Marker
-                                key={place.id || index}
-                                position={[place.lat, place.lng]}
-                            >
-                                <Popup maxWidth={600} minWidth={450} className="custom-popup">
-                                    <div className="w-full max-w-sm bg-white rounded-xl overflow-hidden shadow-lg">
-                                        {/* Görsel */}
-                                        <div className="relative w-full h-48 overflow-hidden">
-                                            <img
-                                                src={place.image || "https://images.unsplash.com/photo-1569949381669-ecf31ae8e613?w=800"}
-                                                alt={place.name}
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => {
-                                                    const target = e.target as HTMLImageElement;
-                                                    target.src = 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&h=600&fit=crop';
-                                                }}
-                                            />
-                                            {place.day && (
-                                                <div className="absolute top-3 left-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
-                                                    {place.day}. Gün
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* İçerik */}
-                                        <div className="p-4">
-                                            <h3 className="text-lg font-bold text-gray-800 mb-2">
-                                                {place.name}
-                                            </h3>
-
-                                            {place.timeSlot && (
-                                                <div className="text-sm text-gray-600 mb-3">
-                                                    🕐 {place.timeSlot}
-                                                </div>
-                                            )}
-
-                                            {place.description && (
-                                                <p className="text-sm text-gray-600 mb-4">
-                                                    {place.description}
-                                                </p>
-                                            )}
-
-                                            {place.address && (
-                                                <p className="text-xs text-gray-500 mb-4">
-                                                    📍 {place.address}
-                                                </p>
-                                            )}
-
-                                            {/* Butonlar */}
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => {
-                                                        const query = encodeURIComponent(`${place.name}, ${place.address || ''}`);
-                                                        const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
-                                                        window.open(url, "_blank");
-                                                    }}
-                                                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-3 rounded-lg text-sm"
-                                                >
-                                                    Google Maps
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        const url = `https://yandex.com/maps/?pt=${place.lng},${place.lat}&z=15`;
-                                                        window.open(url, "_blank");
-                                                    }}
-                                                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-3 rounded-lg text-sm"
-                                                >
-                                                    Yandex Maps
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Popup>
-                            </Marker>
-                        ))}
-
-                        {/* Famous place marker (red) */}
-                        {selectedFamousPlace && (
-                            <Marker
-                                position={[selectedFamousPlace.lat, selectedFamousPlace.lng]}
-                                icon={redIcon}
-                            >
-                                <Popup>
-                                    <div className="text-center font-bold">
-                                        {selectedFamousPlace.nameRu}
-                                    </div>
-                                </Popup>
-                            </Marker>
-                        )}
-                    </MapContainer>
+                    <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
                 </div>
 
                 {/* Famous Place Popup - appears on the right */}

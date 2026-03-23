@@ -18,12 +18,11 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.4",
     "ionicons": "^8.0.13",
-    "leaflet": "^1.9.4",
     "lucide-react": "^0.564.0",
+    "mapbox-gl": "^3.20.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-icons": "^5.5.0",
-    "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.13.1",
     "zustand": "^5.0.11"
   },
