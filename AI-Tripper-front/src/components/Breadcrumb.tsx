@@ -28,7 +28,9 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                     {item.path && index < items.length - 1 ? (
                         <button
-                            onClick={() => navigate(item.path)}
+                            onClick={() => {
+                                if (item.path) navigate(item.path);
+                            }}
                             className="text-gray-500 hover:text-blue-600 transition-colors"
                         >
                             {item.label}

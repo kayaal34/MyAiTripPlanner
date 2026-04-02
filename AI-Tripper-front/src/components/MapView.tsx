@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { useTripStore } from "../store/useTripStore";
 import { famousPlaces } from "../data/famousPlaces";
 import type { FamousPlace } from "../data/famousPlaces";
+import type { Place } from "../type";
 import FamousPlacePopup from "./FamousPlacePopup";
 import { Sparkles } from "lucide-react";
 import mapboxgl from "mapbox-gl";
@@ -14,23 +15,50 @@ if (!MAPBOX_TOKEN) {
 }
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
+function extractItineraryPlaces(plan: ReturnType<typeof useTripStore.getState>["currentTripPlan"]): Place[] {
+    if (!plan?.daily_itinerary?.length) {
+        return [];
+    }
+
+    const places: Place[] = [];
+    let idCounter = 0;
+
+    for (const day of plan.daily_itinerary) {
+        const pushWithCoords = (item?: {
+            name?: string;
+            address?: string;
+            description?: string;
+            coordinates?: { lat?: number; lng?: number };
+        }) => {
+            const lat = item?.coordinates?.lat;
+            const lng = item?.coordinates?.lng;
+            if (typeof lat !== "number" || typeof lng !== "number") return;
+
+            places.push({
+                id: String(idCounter++),
+                name: item?.name || "Place",
+                lat,
+                lng,
+                address: item?.address || "",
+                description: item?.description || "",
+            });
+        };
+
+        day.morning?.activities?.forEach((activity) => pushWithCoords(activity));
+        pushWithCoords(day.lunch?.restaurant);
+        day.afternoon?.activities?.forEach((activity) => pushWithCoords(activity));
+        pushWithCoords(day.evening?.dinner);
+    }
+
+    return places;
+}
+
 export default function MapView() {
-    const places = useTripStore((state) => state.places);
+    const currentTripPlan = useTripStore((state) => state.currentTripPlan);
+    const places = useMemo(() => extractItineraryPlaces(currentTripPlan), [currentTripPlan]);
     const [selectedFamousPlace, setSelectedFamousPlace] = useState<FamousPlace | null>(null);
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<mapboxgl.Map | null>(null);
-
-    const center = useMemo<[number, number]>(() => {
-        if (selectedFamousPlace) {
-            return [selectedFamousPlace.lat, selectedFamousPlace.lng];
-        }
-        if (!places.length) return [41.0151, 28.9795];
-
-        const lat = places.reduce((sum, place) => sum + place.lat, 0) / places.length;
-        const lng = places.reduce((sum, place) => sum + place.lng, 0) / places.length;
-
-        return [lat, lng];
-    }, [places, selectedFamousPlace]);
 
     const handleRandomPlace = () => {
         const randomPlace = famousPlaces[Math.floor(Math.random() * famousPlaces.length)];

@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { MapPin, X } from 'lucide-react';
 import Navbar from '../components/Navbar';
 

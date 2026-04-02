@@ -1,12 +1,14 @@
+from typing import Any
+
 from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
 import os
 
 from services.llm_service import generate_detailed_trip_itinerary
-from database.database import engine, get_db
+from database.database import get_db
 from database import models
 from routes import auth, routes, favorites, history, contact, subscription
 from auth.security import get_current_active_user
@@ -39,63 +41,81 @@ async def root():
         "status": "running"
     }
 
-class RouteRequest(BaseModel):
-    city: str
-    interests: list[str]
-    stops: int
-    mode: str = "walk"
-
-
 class TripPlanRequest(BaseModel):
-    city: str
-    days: int
-    travelers: str
-    interests: list[str]
+    city: str = Field(..., min_length=1)
+    days: int = Field(..., ge=1, le=30)
+    travelers: str = Field(..., min_length=1)
+    interests: list[str] = Field(default_factory=list)
     transport: str = "farketmez"
     budget: str = "orta"
     start_date: str = ""
+    language: str = "Turkish"
 
-# Helper function: Unsplash'ten mekan görseli al
-async def get_place_image(place_name: str, city: str = "istanbul", place_type: str = "landmark") -> str:
-    """Unsplash API'den mekan görseli al, hata durumunda fallback URL döndür"""
-    
-    # Önce statik fallback'leri hazırla (şehir bazlı)
+
+class DetailedTripItineraryModel(BaseModel):
+    trip_summary: dict[str, Any]
+    daily_itinerary: list[dict[str, Any]]
+    accommodation_suggestions: list[dict[str, Any]] = Field(default_factory=list)
+    general_tips: dict[str, Any] = Field(default_factory=dict)
+    packing_list: list[str] = Field(default_factory=list)
+    country_flag: str | None = None
+    city_image: str | None = None
+
+
+def build_fallback_itinerary(request: TripPlanRequest, reason: str) -> dict[str, Any]:
+    return {
+        "trip_summary": {
+            "destination": request.city,
+            "duration_days": request.days,
+            "travelers": request.travelers,
+            "total_estimated_cost": "N/A",
+            "best_season": "N/A",
+            "weather_forecast": "N/A"
+        },
+        "daily_itinerary": [],
+        "accommodation_suggestions": [],
+        "general_tips": {
+            "local_customs": "N/A",
+            "safety": "N/A",
+            "money": "N/A",
+            "emergency_contacts": {
+                "police": "",
+                "ambulance": "",
+                "fire": "",
+                "tourist_police": ""
+            },
+            "useful_phrases": []
+        },
+        "packing_list": [],
+        "fallback_reason": reason,
+    }
+
+
+async def get_city_image(city: str = "istanbul") -> str:
+    """Fetch a single city-level hero image to avoid one API call per activity."""
+
     city_lower = city.lower()
-    if place_type == "restaurant":
-        # Restaurant için Türk mutfağı görselleri
-        fallback = "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&h=600&fit=crop"  # Turkish food
-    else:
-        # Şehir bazlı landmark görselleri
-        city_fallbacks = {
-            "istanbul": "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800&h=600&fit=crop",  # Istanbul
-            "ankara": "https://images.unsplash.com/photo-1570939274717-7eda259b50ed?w=800&h=600&fit=crop",  # Ankara
-            "antalya": "https://images.unsplash.com/photo-1605523666787-dcfca8b5db58?w=800&h=600&fit=crop",  # Antalya
-            "izmir": "https://images.unsplash.com/photo-1578070181910-f1e514afdd08?w=800&h=600&fit=crop",  # Izmir
-        }
-        fallback = city_fallbacks.get(city_lower, "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&h=600&fit=crop")
+    city_fallbacks = {
+        "istanbul": "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=1200&h=800&fit=crop",
+        "ankara": "https://images.unsplash.com/photo-1570939274717-7eda259b50ed?w=1200&h=800&fit=crop",
+        "antalya": "https://images.unsplash.com/photo-1605523666787-dcfca8b5db58?w=1200&h=800&fit=crop",
+        "izmir": "https://images.unsplash.com/photo-1578070181910-f1e514afdd08?w=1200&h=800&fit=crop",
+    }
+    fallback = city_fallbacks.get(city_lower, "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=1200&h=800&fit=crop")
     
     try:
         unsplash_access_key = os.getenv("UNSPLASH_ACCESS_KEY")
         if not unsplash_access_key:
             return fallback
-        
-        # Çok spesifik query oluştur
-        if place_type == "restaurant":
-            # Restaurant isimleri genelde alakasız sonuç veriyor, direkt fallback kullan
-            print(f"📍 Restaurant için statik görsel kullanılıyor: {place_name}")
-            return fallback
-        else:
-            # Landmark için şehir + ülke + mekan ismi
-            query = f"{place_name} {city_lower} turkey"
-        
-        print(f"🔍 Unsplash Query: {query}")
+
+        query = f"{city_lower} skyline travel"
         
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 "https://api.unsplash.com/search/photos",
                 params={
                     "query": query,
-                    "per_page": 3,  # İlk 3 sonucu al, daha iyi seçenek olabilir
+                    "per_page": 1,
                     "orientation": "landscape"
                 },
                 headers={"Authorization": f"Client-ID {unsplash_access_key}"},
@@ -104,17 +124,11 @@ async def get_place_image(place_name: str, city: str = "istanbul", place_type: s
             if response.status_code == 200:
                 data = response.json()
                 if data.get("results") and len(data["results"]) > 0:
-                    # İlk sonucu kullan (en alakalı olmalı)
                     image_url = data["results"][0]["urls"]["regular"]
-                    print(f"✅ Görsel bulundu: {place_name}")
                     return image_url
-                else:
-                    print(f"⚠️ Unsplash'ta sonuç bulunamadı: {place_name}")
     except Exception as e:
-        print(f"⚠️ Unsplash API hatası ({place_name}): {e}")
-    
-    # Fallback: Şehir bazlı statik görsel
-    print(f"📸 Fallback görsel kullanılıyor: {place_name}")
+        print(f"Unsplash city image error ({city}): {e}")
+
     return fallback
 
 # Debug middleware
@@ -125,84 +139,6 @@ async def log_requests(request: Request, call_next):
         print(f"RECEIVED BODY: {body.decode()}")
     response = await call_next(request)
     return response
-
-@app.post("/api/route")
-async def generate_route(data: RouteRequest, db: AsyncSession = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
-    print(f"Received request: {data}")
-    
-    # Check user's remaining routes
-    if current_user.remaining_routes == 0:
-        raise HTTPException(
-            status_code=403, 
-            detail="Ücretsiz rota hakkınız bitti. Premium'a geçin!"
-        )
-    
-    places = await generate_places(
-        city=data.city,
-        interests=data.interests,
-        stop_count=data.stops,
-    )
-    
-    # Frontend'in beklediği format
-    formatted_places = []
-    for i, place in enumerate(places):
-        # Unsplash'ten gerçek görsel al (şehir bilgisi ile)
-        image_url = await get_place_image(
-            place["name"], 
-            city=data.city,
-            place_type="landmark"
-        )
-        
-        formatted_places.append({
-            "id": str(i),
-            "name": place["name"],
-            "lat": float(place["lat"]),
-            "lng": float(place["lng"]),
-            "address": place.get("address", ""),
-            "description": place.get("description", ""),
-            # Modern popup için yeni alanlar
-            "image": image_url,
-            "day": 1,  # Tek günlük rota için 1
-            "timeSlot": "Sabah" if i <= 1 else ("Öğleden Sonra" if i <= 3 else "Akşam")
-        })
-    
-    # Decrease remaining routes (if not unlimited)
-    if current_user.remaining_routes > 0:
-        current_user.remaining_routes -= 1
-        await db.commit()
-    
-    # Save to history (is_saved=False)
-    trip_entry = models.Trip(
-        user_id=current_user.id,
-        city=data.city,
-        country=None,
-        duration_days=1,
-        travelers="yalniz",
-        interests=data.interests,
-        mode=data.mode,
-        places=formatted_places,
-        trip_plan={"places": formatted_places},
-        is_saved=False
-    )
-    db.add(trip_entry)
-    await db.commit()
-    
-    return {
-        "places": formatted_places,
-        "route": {
-            "mode": data.mode,
-            "distanceKm": 5.2,
-            "durationMinutes": 45
-        },
-        "remaining_routes": current_user.remaining_routes
-    }
-
-@app.get("/api/places")
-async def get_places_list(city: str = "Istanbul", interests: str = "culture", stops: int = 3):
-    interest_list = interests.split(",")
-    places = await generate_places(city, interest_list, stops)
-    return {"success": True, "places": places}
-
 
 @app.get("/api/country-info/{country_name}")
 async def get_country_info(country_name: str):
@@ -244,11 +180,6 @@ async def get_country_info(country_name: str):
         print(f"❌ Ülke bilgisi alınamadı: {e}")
         return {"success": False, "error": str(e)}
 
-@app.post("/api/places")
-async def get_places(data: RouteRequest):
-    places = await generate_places(data.city, data.interests, data.stops)
-    return {"success": True, "places": places}
-
 @app.post("/api/personalized-trip")
 async def create_personalized_trip(
     db: AsyncSession = Depends(get_db), 
@@ -280,7 +211,6 @@ async def create_personalized_trip(
         duration_days=5,
         travelers="yalniz",
         interests=current_user.interests or ["kişiselleştirilmiş"],
-        mode="personalized",
         trip_plan=plan,
         is_saved=False
     )
@@ -323,53 +253,20 @@ async def create_detailed_trip_plan(
             "interests": trip_request.interests,
             "transport": trip_request.transport,
             "budget": trip_request.budget,
-            "start_date": trip_request.start_date
+            "start_date": trip_request.start_date,
+            "language": trip_request.language,
         }
         
         # AI ile detaylı itinerary oluştur
-        itinerary = await generate_detailed_trip_itinerary(trip_data)
-        
-        # Her aktivite ve restoran için gerçek görselleri Unsplash'tan çek
-        print(f"🖼️ Görseller yükleniyor ({trip_request.city})...")
-        if itinerary and "daily_itinerary" in itinerary:
-            for day in itinerary["daily_itinerary"]:
-                # Morning activities
-                if day.get("morning") and day["morning"].get("activities"):
-                    for activity in day["morning"]["activities"]:
-                        if activity.get("name"):
-                            activity["image"] = await get_place_image(
-                                activity["name"], 
-                                city=trip_request.city,
-                                place_type="landmark"
-                            )
-                
-                # Lunch restaurant
-                if day.get("lunch") and day["lunch"].get("restaurant") and day["lunch"]["restaurant"].get("name"):
-                    day["lunch"]["restaurant"]["image"] = await get_place_image(
-                        day["lunch"]["restaurant"]["name"],
-                        city=trip_request.city,
-                        place_type="restaurant"
-                    )
-                
-                # Afternoon activities
-                if day.get("afternoon") and day["afternoon"].get("activities"):
-                    for activity in day["afternoon"]["activities"]:
-                        if activity.get("name"):
-                            activity["image"] = await get_place_image(
-                                activity["name"],
-                                city=trip_request.city,
-                                place_type="landmark"
-                            )
-                
-                # Evening dinner
-                if day.get("evening") and day["evening"].get("dinner") and day["evening"]["dinner"].get("name"):
-                    day["evening"]["dinner"]["image"] = await get_place_image(
-                        day["evening"]["dinner"]["name"],
-                        city=trip_request.city,
-                        place_type="restaurant"
-                    )
-        
-        print("✅ Görseller yüklendi")
+        raw_itinerary = await generate_detailed_trip_itinerary(trip_data)
+
+        try:
+            itinerary = DetailedTripItineraryModel.model_validate(raw_itinerary).model_dump()
+        except ValidationError as validation_error:
+            print(f"Invalid AI itinerary payload: {validation_error}")
+            itinerary = build_fallback_itinerary(trip_request, "invalid_ai_payload")
+
+        itinerary["city_image"] = await get_city_image(trip_request.city)
         
         # Kalan rota hakkını azalt (unlimited değilse)
         if current_user.remaining_routes > 0:

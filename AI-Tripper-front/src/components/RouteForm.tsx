@@ -32,7 +32,6 @@ export default function RouteForm() {
     const [travelers, setTravelers] = useState("");
     const [interests, setInterests] = useState<string[]>([]);
     const [budget, setBudget] = useState("orta");
-    const [loadingMessage, setLoadingMessage] = useState("");
     const [normalLoading, setNormalLoading] = useState(false);
 
     // City autocomplete states
@@ -180,11 +179,9 @@ export default function RouteForm() {
         ];
 
         let messageIndex = 0;
-        setLoadingMessage(messages[0]);
 
         const messageInterval = setInterval(() => {
             messageIndex = (messageIndex + 1) % messages.length;
-            setLoadingMessage(messages[messageIndex]);
         }, 2000);
 
         try {
@@ -209,12 +206,12 @@ export default function RouteForm() {
                 travelers: travelersValue,
                 interests: interestsValues,
                 transport: transportValue,
-                budget: budget
+                budget: budget,
+                language: "Russian"
             }, token);
 
             clearInterval(messageInterval);
             setNormalLoading(false);
-            setLoadingMessage("");
 
             console.log("✅ Plan oluşturuldu:", response.itinerary);
 
@@ -242,7 +239,6 @@ export default function RouteForm() {
         } catch (error: any) {
             clearInterval(messageInterval);
             setNormalLoading(false);
-            setLoadingMessage("");
             console.error("❌ Plan oluşturma hatası:", error);
             alert(`Hata: ${error.message || "Plan oluşturulamadı. Lütfen tekrar deneyin."}`);
         }

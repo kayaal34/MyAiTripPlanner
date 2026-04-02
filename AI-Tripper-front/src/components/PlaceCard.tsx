@@ -25,12 +25,12 @@ export default function PlaceCard({
                     {place.name}
                 </h3>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                    {place.interest}
+                    {place.timeSlot || "Aktivite"}
                 </span>
             </header>
             <p className="mt-2 text-sm text-slate-600">{place.description}</p>
             <div className="mt-3 text-xs font-medium text-slate-500">
-                {place.lat.toFixed(4)}°N • {place.lon.toFixed(4)}°E
+                {place.lat.toFixed(4)}°N • {place.lng.toFixed(4)}°E
             </div>
         </article>
     );

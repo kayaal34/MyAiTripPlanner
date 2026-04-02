@@ -91,7 +91,7 @@ class TripCreate(BaseModel):
     interests: List[str]
     budget: Optional[str] = None
     transport: Optional[str] = None
-    mode: str = "walk"  # deprecated
+    mode: Optional[str] = None  # deprecated
     trip_plan: dict
     places: Optional[List[dict]] = None  # deprecated
     is_saved: bool = False
@@ -115,7 +115,7 @@ class Trip(BaseModel):
     interests: List[str]
     budget: Optional[str] = None
     transport: Optional[str] = None
-    mode: str
+    mode: Optional[str] = None
     trip_plan: dict
     places: Optional[List[dict]] = None
     created_at: datetime

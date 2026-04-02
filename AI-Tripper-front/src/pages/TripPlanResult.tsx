@@ -172,6 +172,11 @@ export default function TripPlanResult() {
             return;
         }
 
+        if (!currentTripPlan) {
+            alert("Plan verisi bulunamadı!");
+            return;
+        }
+
         setIsSaving(true);
 
         try {
@@ -183,7 +188,7 @@ export default function TripPlanResult() {
                 currentTripFormData.travelers,
                 currentTripFormData.interests,
                 currentTripFormData.budget || "orta",
-                currentTripFormData.transport,
+                currentTripFormData.transport || "farketmez",
                 token
             );
 

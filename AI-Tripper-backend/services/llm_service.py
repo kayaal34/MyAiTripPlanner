@@ -1,378 +1,433 @@
-import os
 import json
+import os
+from typing import Any
+
 import httpx
 from dotenv import load_dotenv
 from fastapi import HTTPException
 
 load_dotenv()
 
-# =====================================================================
-# TÜM MOCK FONKSİYONLAR KALDIRILDI
-# Gemini API çalışmazsa düzgün hata mesajı verilecek
-# Sadece gerçek verilerle plan oluşturulacak
-# =====================================================================
+
+def _extract_json_object(text: str) -> dict[str, Any]:
+    """Try strict JSON parse first, then recover from fenced or noisy output."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`")
+        cleaned = cleaned.replace("json", "", 1).strip()
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        raise json.JSONDecodeError("No JSON object found", cleaned, 0)
+
+    return json.loads(cleaned[start : end + 1])
+
+
+async def resolve_country_name_from_city(city: str) -> str:
+    """Resolve country dynamically from city using geocoding first, then REST Countries fallback."""
+    city_clean = city.split(",")[0].strip()
+    if not city_clean:
+        return ""
+
+    timeout = httpx.Timeout(connect=10.0, read=10.0, write=10.0, pool=10.0)
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            # Primary: Nominatim city lookup
+            nominatim = await client.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={
+                    "q": city,
+                    "format": "json",
+                    "limit": 1,
+                    "addressdetails": 1,
+                },
+                headers={"User-Agent": "AI-Trip-Planner/2.0"},
+            )
+            if nominatim.status_code == 200:
+                rows = nominatim.json()
+                if rows:
+                    country = rows[0].get("address", {}).get("country", "").strip()
+                    if country:
+                        return country
+
+            # Secondary: if user typed "City, Country"
+            if "," in city:
+                parts = [part.strip() for part in city.split(",") if part.strip()]
+                if len(parts) >= 2:
+                    return parts[-1]
+
+            # Fallback: REST Countries by capital
+            by_capital = await client.get(
+                f"https://restcountries.com/v3.1/capital/{city_clean}",
+                timeout=8.0,
+            )
+            if by_capital.status_code == 200:
+                rows = by_capital.json()
+                if rows:
+                    return rows[0].get("name", {}).get("common", "").strip()
+    except Exception as exc:
+        print(f"Country resolve failed for city '{city}': {exc}")
+
+    return ""
+
 
 async def get_country_context(city: str) -> tuple[str, str]:
-    """REST Countries API'den ülke bilgilerini al ve LLM için context + bayrak URL döndür"""
+    """Return country context text + flag URL for prompt enrichment."""
     try:
-        # Şehir isminden ülke ismini tahmin et (basit mapping)
-        city_to_country = {
-            "paris": "france", "istanbul": "turkey", "i̇stanbul": "turkey", "roma": "italy", "rome": "italy",
-            "barselona": "spain", "barcelona": "spain", "londra": "united kingdom", "london": "united kingdom",
-            "amsterdam": "netherlands", "berlin": "germany", "prag": "czechia", "prague": "czechia",
-            "viyana": "austria", "vienna": "austria", "budapeşte": "hungary", "budapest": "hungary",
-            "atina": "greece", "athens": "greece", "dubai": "united arab emirates",
-            "tokyo": "japan", "new york": "united states", "bangkok": "thailand",
-            "singapur": "singapore", "singapore": "singapore", "sydney": "australia",
-            "lizbon": "portugal", "lisbon": "portugal", "madrid": "spain", "münih": "germany", "munich": "germany",
-            "ankara": "turkey", "antalya": "turkey", "bodrum": "turkey", "kapadokya": "turkey"
-        }
-        
-        # Şehir ismindeki ", Ülke" kısmını temizle
-        city_clean = city.split(",")[0].strip().lower()
-        country_name = city_to_country.get(city_clean, "")
-        
+        country_name = await resolve_country_name_from_city(city)
         if not country_name:
             return ("", "")
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"https://restcountries.com/v3.1/name/{country_name}?fullText=false",
-                timeout=5.0
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data and len(data) > 0:
-                    country = data[0]
-                    
-                    languages = ", ".join(list(country.get("languages", {}).values())[:3])
-                    currencies = ", ".join(list(country.get("currencies", {}).keys())[:2])
-                    timezone = country.get("timezones", [""])[0]
-                    flag_url = country.get("flags", {}).get("png", "")
-                    
-                    context = f"""
-🌍 ÜLKE BİLGİLERİ ({country.get('name', {}).get('common', '')}):  
-- Başkent: {country.get('capital', [''])[0]}
-- Diller: {languages}
-- Para Birimi: {currencies}
-- Saat Dilimi: {timezone}
-- Bölge: {country.get('region', '')} - {country.get('subregion', '')}
 
-💡 BU BİLGİLERİ KULLANARAK:
-- Para birimi ile gerçekçi fiyatlar ver
-- Yerel dilde teşekkür/selamlaşma ifadeleri ekle  
-- Saat dilimi farkını belirt (Türkiye ile karşılaştır)
-- Kültürel özellikler hakkında ipuçları ver
-                    """
-                    return (context, flag_url)
-    except Exception as e:
-        print(f"⚠️ Ülke bilgisi alınamadı: {e}")
-    
-    return ("", "")
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                f"https://restcountries.com/v3.1/name/{country_name}?fullText=false"
+            )
+
+        if response.status_code != 200:
+            return ("", "")
+
+        rows = response.json()
+        if not rows:
+            return ("", "")
+
+        country = rows[0]
+        languages = ", ".join(list(country.get("languages", {}).values())[:3]) or "N/A"
+        currencies = ", ".join(list(country.get("currencies", {}).keys())[:2]) or "N/A"
+        timezone = country.get("timezones", ["N/A"])[0]
+        flag_url = country.get("flags", {}).get("png", "")
+        capital = country.get("capital", [""])[0]
+        region = country.get("region", "")
+        subregion = country.get("subregion", "")
+        common_name = country.get("name", {}).get("common", country_name)
+
+        context = (
+            f"Country context for {common_name}:\\n"
+            f"- Capital: {capital}\\n"
+            f"- Languages: {languages}\\n"
+            f"- Currency: {currencies}\\n"
+            f"- Timezone: {timezone}\\n"
+            f"- Region: {region} / {subregion}\\n"
+            "Use this context to keep pricing, local tips, and emergency info realistic."
+        )
+        return (context, flag_url)
+    except Exception as exc:
+        print(f"Country context fetch failed: {exc}")
+        return ("", "")
+
 
 async def generate_detailed_trip_itinerary(trip_data: dict):
-    """
-    PRODUCTION-READY: Kullanıcının girdiği verilere göre GÜN GÜN detaylı tatil planı oluşturur.
-    
-    ✅ Async HTTP (httpx.AsyncClient)
-    ✅ JSON zorunlu (response_mime_type: application/json)
-    ✅ Gemini 2.5 Flash (en yeni model, v1beta uyumlu)
-    ✅ Temperature: 0.6 (JSON format uyumu + gerçek yerler)
-    ✅ Kısa açıklamalar (max 80 karakter - JSON parse hatasını önler)
-    ✅ Kişiselleştirme (travelers, budget, interests)
-    ✅ REST Countries API entegrasyonu (para birimi, dil, saat dilimi)
-    """
-    
+    """Generate day-by-day itinerary as strict JSON using Gemini 2.5 Flash."""
+
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise HTTPException(
             status_code=500,
-            detail="GOOGLE_API_KEY bulunamadı. Lütfen .env dosyasını kontrol edin."
+            detail="GOOGLE_API_KEY was not found. Check your .env file.",
         )
-    
-    try:
-        # Form verilerini çıkar
-        city = trip_data.get('city', 'İstanbul')
-        days = trip_data.get('days', 3)
-        travelers = trip_data.get('travelers', 'yalniz')
-        interests = trip_data.get('interests', [])
-        budget = trip_data.get('budget', 'orta')
-        start_date = trip_data.get('start_date', '')
-        
-        # Ülke bilgilerini al (REST Countries API)
-        country_context, country_flag = await get_country_context(city)
-        
-        interests_text = ", ".join(interests) if interests else "общий туризм"
-        
-        # Бюджетные диапазоны (пример, валюта может варьироваться по городам)
-        budget_ranges = {
-            "ekonomik": "экономичный (суточный бюджет 500-1000 TL)",
-            "orta": "средний (суточный бюджет 1000-2500 TL)",
-            "luks": "люкс (суточный бюджет 2500+ TL)"
-        }
-        budget_description = budget_ranges.get(budget.lower(), budget_ranges["orta"])
-        
-        # Специальные инструкции в зависимости от типа путешественника
-        traveler_guides = {
-            "yalniz": "Для одиноких путешественников: общественные места, безопасные маршруты, рекомендации хостелей/кафе, мероприятия для одного человека",
-            "cift": "Для пар: романтичные рестораны, места заката, интимная атмосфера, парные экскурсии (спа, дегустация вина)",
-            "aile": "Для семей: рестораны для детей, образовательные и развлекательные мероприятия, безопасные места, парки, экономичные варианты",
-            "arkadaslar": "Для групп друзей: ночная жизнь, групповые мероприятия (квест, боулинг), социальные места, экстремальные виды спорта"
-        }
-        traveler_context = traveler_guides.get(travelers.lower(), traveler_guides["yalniz"])
-        
-        # Профессиональный гид-подсказка (обогащена информацией из REST Countries API)
-        prompt = f"""
-Вы - самый престижный гид-туристический консультант города {city}. Рекомендуйте только реальные места.
+
+    city = trip_data.get("city", "Istanbul")
+    days = int(trip_data.get("days", 3))
+    travelers = trip_data.get("travelers", "yalniz")
+    interests = trip_data.get("interests", [])
+    budget = trip_data.get("budget", "orta")
+    transport = trip_data.get("transport", "farketmez")
+    start_date = trip_data.get("start_date", "")
+    target_language = (trip_data.get("language") or "Turkish").strip() or "Turkish"
+
+    country_context, country_flag = await get_country_context(city)
+
+    interests_text = ", ".join(interests) if interests else "general tourism"
+
+    traveler_guides = {
+        "yalniz": "Solo traveler: prioritize safe public areas, flexible plans, social-friendly venues.",
+        "cift": "Couple: include romantic views, date-friendly restaurants, and cozy evening ideas.",
+        "aile": "Family: include child-friendly attractions, balanced pacing, and safety-first options.",
+        "arkadaslar": "Friends: include social spots, group activities, and lively evening options.",
+    }
+    traveler_context = traveler_guides.get(travelers.lower(), traveler_guides["yalniz"])
+
+    budget_guides = {
+        "ekonomik": "budget-friendly",
+        "orta": "mid-range",
+        "luks": "premium",
+    }
+    budget_context = budget_guides.get(str(budget).lower(), "mid-range")
+
+    prompt = f"""
+You are an expert local travel planner.
+Create a realistic {days}-day travel itinerary for {city}.
+
+Hard requirements:
+1) Return ONLY valid JSON. No markdown, no comments, no extra text.
+2) Keep all user-facing itinerary content in {target_language}.
+3) Keep place and restaurant names real and geographically plausible.
+4) Include realistic addresses and coordinates whenever possible.
+5) Keep descriptions concise and readable.
+6) Keep costs and suggestions aligned with a {budget_context} budget.
+7) Consider traveler type: {traveler_context}
+8) Interests: {interests_text}
+9) Preferred transport: {transport}
+10) Start date (if present): {start_date or 'not provided'}
 
 {country_context}
 
-Клиент: {travelers}, Бюджет: {budget_description}, Интересы: {interests_text}, {days} дней.
-
-⚠️ КРИТИЧЕСКИЕ ПРАВИЛА JSON:
-1. Все описания МАКСИМУМ 80 символов
-2. Используйте русские символы, но будьте внимательны с кавычками
-3. Используйте только реальные названия мест (запрещены обобщённые названия)
-4. Каждое строковое значение должно быть в двойных кавычках
-
-⚠️ КРИТИЧЕСКИЕ ИНСТРУКЦИИ ДЛЯ GENERAL_TIPS:
-- local_customs: СПЕЦИФИЧНЫЕ для {city} культурные нормы, этикет, запреты, нормы поведения
-- safety: СПЕЦИФИЧНЫЕ советы по безопасности для {city} (безопасные/опасные районы, техники мошенничества, статус полиции)
-- money: Детали валюты, комиссии банкоматов, возможность оплаты кредитной картой, культура чаевых, обмен валюты
-- emergency_contacts: РЕАЛЬНЫЕ номера аварийных служб {city} (полиция, скорая помощь, пожарная служба, туристическая полиция если есть)
-- useful_phrases: 6-8 ПОЛЕЗНЫХ фраз на местном языке (приветствие, спасибо, помощь, цена, направление и т.д.)
-
-SADECE AŞAĞIDAKİ JSON FORMATINDA CEVAP VER:
-
+JSON schema to follow exactly:
 {{
   "trip_summary": {{
-    "destination": "{city}",
+    "destination": "string",
     "duration_days": {days},
-    "total_estimated_cost": "Прим: 15.000 TL",
-    "best_season": "Прим: Весна",
-    "weather_forecast": "Прим: Солнечно и тепло"
+    "travelers": "string",
+    "total_estimated_cost": "string",
+    "best_season": "string",
+    "weather_forecast": "string"
   }},
   "daily_itinerary": [
     {{
       "day": 1,
-      "title": "Творческое название дня",
+      "date": "string",
+      "title": "string",
       "morning": {{
-        "time": "09:00-12:00",
+        "time": "string",
         "activities": [
           {{
-            "name": "Реальное название места",
-            "type": "museum",
-            "address": "Реальный адрес или район",
-            "coordinates": {{"lat": 41.0122, "lng": 28.9760}},
-            "duration": "2 часа",
-            "cost": "200 TL",
-            "description": "Краткое описание (макс 80 символов)",
-            "tips": "Совет (макс 60 символов)"
+            "name": "string",
+            "type": "string",
+            "address": "string",
+            "coordinates": {{"lat": 0.0, "lng": 0.0}},
+            "duration": "string",
+            "cost": "string",
+            "description": "string",
+            "tips": "string"
           }}
         ]
       }},
       "lunch": {{
-        "time": "12:00-14:00",
+        "time": "string",
         "restaurant": {{
-          "name": "Реальное название ресторана",
-          "address": "Реальный адрес",
-          "coordinates": {{"lat": 41.0130, "lng": 28.9770}},
-          "cuisine": "Тип кухни",
-          "average_cost": "Стоимость на человека",
-          "recommended_dishes": ["Блюдо 1", "Блюдо 2"],
-          "description": "Краткое описание (макс 60 символов)"
+          "name": "string",
+          "address": "string",
+          "coordinates": {{"lat": 0.0, "lng": 0.0}},
+          "cuisine": "string",
+          "average_cost": "string",
+          "recommended_dishes": ["string"],
+          "description": "string"
         }}
       }},
       "afternoon": {{
-        "time": "14:00-18:00",
+        "time": "string",
         "activities": [
           {{
-            "name": "Реальное место",
-            "type": "cultural",
-            "address": "Реальный адрес",
-            "coordinates": {{"lat": 41.0140, "lng": 28.9780}},
-            "duration": "3 часа",
-            "cost": "Стоимость",
-            "description": "Краткое описание (макс 60 символов)"
+            "name": "string",
+            "type": "string",
+            "address": "string",
+            "coordinates": {{"lat": 0.0, "lng": 0.0}},
+            "duration": "string",
+            "cost": "string",
+            "description": "string"
           }}
         ]
       }},
       "evening": {{
-        "time": "18:00-22:00",
+        "time": "string",
         "dinner": {{
-          "name": "Реальный ресторан",
-          "address": "Адрес",
-          "coordinates": {{"lat": 41.0150, "lng": 28.9790}},
-          "cuisine": "Кухня",
-          "average_cost": "Стоимость",
-          "description": "Краткое описание (макс 60 символов)"
+          "name": "string",
+          "address": "string",
+          "coordinates": {{"lat": 0.0, "lng": 0.0}},
+          "cuisine": "string",
+          "average_cost": "string",
+          "description": "string"
         }},
-        "night_activities": ["Мероприятие 1", "Мероприятие 2"]
+        "night_activities": ["string"]
       }},
       "daily_tips": {{
-        "weather": "Прогноз погоды",
-        "clothing": "Рекомендация по одежде",
-        "estimated_daily_budget": "Суточный бюджет"
+        "weather": "string",
+        "clothing": "string",
+        "important_notes": "string",
+        "estimated_daily_budget": "string"
       }},
       "transportation": {{
-        "getting_around": "Транспорт",
-        "estimated_transport_cost": "Стоимость"
+        "getting_around": "string",
+        "estimated_transport_cost": "string"
       }}
     }}
   ],
   "accommodation_suggestions": [
     {{
-      "name": "Реальное название отеля",
-      "type": "hotel",
-      "location": "Район",
-      "price_range": "Цена",
-      "description": "Краткое описание (макс 60 символов)"
+      "name": "string",
+      "type": "string",
+      "location": "string",
+      "price_range": "string",
+      "why_recommended": "string"
     }}
   ],
   "general_tips": {{
-    "local_customs": "РЕАЛЬНЫЕ культурные нормы и этикет города {city} (примеры: одежда, приветствия, религия, культура чаевых)",
-    "safety": "СПЕЦИФИЧЕСКИЕ советы по безопасности для {city} (безопасные/опасные районы, схемы мошенничества, статус полиции)",
-    "money": "Валюта: реальные пункты обмена, комиссии банкоматов, места, где принимают кредитные карты, процент чаевых, культура торга",
+    "local_customs": "string",
+    "safety": "string",
+    "money": "string",
     "emergency_contacts": {{
-      "police": "Номер полиции {city} (реальный)",
-      "ambulance": "Номер скорой помощи {city} (реальный)",
-      "fire": "Номер пожарной службы {city} (реальный)",
-      "tourist_police": "Номер туристической полиции {city} (если есть - реальный, иначе пустая строка)"
+      "police": "string",
+      "ambulance": "string",
+      "fire": "string",
+      "tourist_police": "string"
     }},
-    "useful_phrases": [
-      "Привет - Эквивалент на местном языке",
-      "Спасибо - Эквивалент на местном языке",
-      "Пожалуйста - Эквивалент на местном языке",
-      "Сколько это стоит? - Эквивалент на местном языке",
-      "Помощь! - Эквивалент на местном языке",
-      "Где? - Эквивалент на местном языке"
-    ]
+    "useful_phrases": ["string"]
   }},
-  "packing_list": ["Предмет 1", "Предмет 2", "Предмет 3"]
+  "packing_list": ["string"]
 }}
+"""
 
-Создайте план на {days} дней в вышеуказанном формате JSON.
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.5-flash:generateContent?key={api_key}"
+    )
 
-КРИТИЧЕСКИе требования: 
-- ТОЛЬКО действительный JSON (без объяснений и комментариев)
-- Все описания короче 80 символов
-- Используйте только реальные названия мест/ресторанов
-- Координаты должны быть реальными
-        """
-        
-        # Gemini API'sine asenkron istek gönder
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-        
-        headers = {"Content-Type": "application/json"}
-        
-        data = {
-            "contents": [{
-                "parts": [{
-                    "text": prompt
-                }]
-            }],
-            "generationConfig": {
-                "temperature": 0.6,  # Gemini 2.5 için dengeli (gerçek yerler + format uyumu)
-                "topP": 0.95,
-                "topK": 40,
-                "maxOutputTokens": 16384,  # Detaylı plan için yüksek limit
-                "response_mime_type": "application/json"  # JSON zorunlu
-            },
-            "safetySettings": [
-                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
-            ]
-        }
-        
-        # Asenkron HTTP isteği (detaylı timeout ayarları)
-        timeout_config = httpx.Timeout(
-            connect=30.0,  # Bağlantı kurma: 30 saniye
-            read=120.0,    # Veri okuma: 120 saniye (Gemini yavaş olabilir)
-            write=30.0,    # Veri yazma: 30 saniye
-            pool=30.0      # Connection pool: 30 saniye
-        )
-        
-        try:
-            async with httpx.AsyncClient(timeout=timeout_config) as client:
-                response = await client.post(url, headers=headers, json=data)
-        except httpx.ConnectTimeout:
-            print("⏱️ Gemini API bağlantı timeout'u (30 saniye)")
-            raise HTTPException(
-                status_code=504,
-                detail="Gemini API'ye bağlanılamadı. İnternet bağlantınızı kontrol edin veya daha sonra tekrar deneyin."
-            )
-        except httpx.ReadTimeout:
-            print("⏱️ Gemini API okuma timeout'u (120 saniye)")
-            raise HTTPException(
-                status_code=504,
-                detail="API yanıt vermedi. Daha kısa bir süre veya daha az gün seçerek tekrar deneyin."
-            )
-        
-        if response.status_code != 200:
-            error_detail = response.text[:500]
-            print(f"⚠️ Gemini API hatası: {response.status_code}")
-            print(f"Response detayı: {error_detail}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Gemini API hatası ({response.status_code}). Lütfen daha sonra tekrar deneyin."
-            )
-        
-        result = response.json()
-        
-        # API yanıtı kontrolü
-        if 'candidates' not in result or not result['candidates']:
-            print(f"⚠️ Gemini yanıtında candidates yok: {result}")
-            raise HTTPException(
-                status_code=500,
-                detail="Gemini API'den geçerli yanıt alınamadı. Lütfen tekrar deneyin."
-            )
-        
-        ai_text = result['candidates'][0]['content']['parts'][0]['text']
-        
-        # JSON parse et (Gemini direkt JSON döndürür)
-        try:
-            itinerary = json.loads(ai_text)
-            
-            # Bayrak URL'ini ekle
-            if country_flag:
-                itinerary["country_flag"] = country_flag
-            
-            print(f"✅ {days} günlük production-ready plan oluşturuldu: {city}")
-            print(f"   - Travelers: {travelers}")
-            print(f"   - Budget: {budget}")
-            print(f"   - Interests: {interests_text}")
-            return itinerary
-            
-        except json.JSONDecodeError as e:
-            print(f"❌ AI yanıtı JSON parse edilemedi: {e}")
-            print(f"Raw AI response (first 1000 chars):\n{ai_text[:1000]}")
-            raise HTTPException(
-                status_code=500,
-                detail="AI'dan gelen yanıt işlenemedi. Lütfen tekrar deneyin."
-            )
-            
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.5,
+            "topP": 0.95,
+            "topK": 40,
+            "maxOutputTokens": 16384,
+            "response_mime_type": "application/json",
+        },
+        "safetySettings": [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+        ],
+    }
+
+    timeout = httpx.Timeout(connect=30.0, read=120.0, write=30.0, pool=30.0)
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(url, headers={"Content-Type": "application/json"}, json=payload)
     except httpx.ConnectTimeout:
-        # Yukarıda zaten yakalanıyor ama güvenlik için burada da ekleyelim
-        raise
+        raise HTTPException(
+            status_code=504,
+            detail="Could not connect to Gemini API. Please try again.",
+        )
     except httpx.ReadTimeout:
-        # Yukarıda zaten yakalanıyor ama güvenlik için burada da ekleyelim
-        raise
-    except httpx.RequestError as e:
-        print(f"❌ HTTP istek hatası: {e}")
+        raise HTTPException(
+            status_code=504,
+            detail="Gemini API timed out. Try fewer days and retry.",
+        )
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=500, detail=f"Gemini request failed: {exc}")
+
+    if response.status_code != 200:
         raise HTTPException(
             status_code=500,
-            detail=f"API bağlantı hatası: {str(e)}"
+            detail=f"Gemini API error ({response.status_code}).",
         )
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ Beklenmeyen hata: {e}")
-        import traceback
-        traceback.print_exc()
+
+    data = response.json()
+    candidates = data.get("candidates", [])
+    if not candidates:
+        raise HTTPException(status_code=500, detail="Gemini returned no candidates.")
+
+    try:
+        ai_text = candidates[0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError, TypeError):
+        raise HTTPException(status_code=500, detail="Gemini response shape is invalid.")
+
+    try:
+        itinerary = _extract_json_object(ai_text)
+    except json.JSONDecodeError:
         raise HTTPException(
             status_code=500,
-            detail=f"Tatil planı oluşturulurken hata oluştu: {str(e)}"
+            detail="AI returned invalid JSON. Please try again.",
         )
+
+    if country_flag:
+        itinerary["country_flag"] = country_flag
+
+    return itinerary
+
+
+async def generate_mock_trip_itinerary(trip_data: dict) -> dict[str, Any]:
+    """Backup itinerary generator used when AI providers are unavailable."""
+
+    city = trip_data.get("city", "Istanbul")
+    days = int(trip_data.get("days", 3))
+    travelers = trip_data.get("travelers", "yalniz")
+
+    daily_itinerary = []
+    for day in range(1, days + 1):
+        daily_itinerary.append(
+            {
+                "day": day,
+                "date": "",
+                "title": f"Day {day} in {city}",
+                "morning": {"time": "09:00-12:00", "activities": []},
+                "lunch": {
+                    "time": "12:00-14:00",
+                    "restaurant": {
+                        "name": "",
+                        "address": "",
+                        "coordinates": {"lat": 0.0, "lng": 0.0},
+                        "cuisine": "",
+                        "average_cost": "",
+                        "recommended_dishes": [],
+                        "description": "",
+                    },
+                },
+                "afternoon": {"time": "14:00-18:00", "activities": []},
+                "evening": {
+                    "time": "18:00-22:00",
+                    "dinner": {
+                        "name": "",
+                        "address": "",
+                        "coordinates": {"lat": 0.0, "lng": 0.0},
+                        "cuisine": "",
+                        "average_cost": "",
+                        "description": "",
+                    },
+                    "night_activities": [],
+                },
+                "daily_tips": {
+                    "weather": "",
+                    "clothing": "",
+                    "important_notes": "",
+                    "estimated_daily_budget": "",
+                },
+                "transportation": {
+                    "getting_around": "",
+                    "estimated_transport_cost": "",
+                },
+            }
+        )
+
+    return {
+        "trip_summary": {
+            "destination": city,
+            "duration_days": days,
+            "travelers": travelers,
+            "total_estimated_cost": "N/A",
+            "best_season": "N/A",
+            "weather_forecast": "N/A",
+        },
+        "daily_itinerary": daily_itinerary,
+        "accommodation_suggestions": [],
+        "general_tips": {
+            "local_customs": "",
+            "safety": "",
+            "money": "",
+            "emergency_contacts": {
+                "police": "",
+                "ambulance": "",
+                "fire": "",
+                "tourist_police": "",
+            },
+            "useful_phrases": [],
+        },
+        "packing_list": [],
+    }

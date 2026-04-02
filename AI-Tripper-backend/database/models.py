@@ -56,11 +56,14 @@ class Trip(Base):
     interests = Column(JSON, nullable=False)  # ["kultur", "yemek", "doga"]
     budget = Column(String, nullable=True)  # "dusuk", "orta", "yuksek"
     transport = Column(String, nullable=True)  # "ucak", "araba", "farketmez"
-    mode = Column(String, default="walk")  # Eski sistemden kalan (deprecated)
+    # Deprecated: kept only for backward compatibility with older records.
+    mode = Column(String, nullable=True, default=None)
     
     # AI plan verisi
-    trip_plan = Column(JSON, nullable=False)  # Detaylı gün gün plan (AI'dan gelen)
-    places = Column(JSON, nullable=True)  # Eski sistemden gelen yerler (deprecated)
+    # Canonical trip payload used by the new planner flow.
+    trip_plan = Column(JSON, nullable=False)
+    # Deprecated: kept only for backward compatibility with older records.
+    places = Column(JSON, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, index=True)

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuthStore } from "../store/useAuthStore";
+import { useTripStore } from "../store/useTripStore";
 import Navbar from "../components/Navbar";
 import Breadcrumb from "../components/Breadcrumb";
 import { 
@@ -20,9 +21,11 @@ type TabType = "hesabim" | "planlarim" | "favorilerim" | "ayarlar";
 
 export default function Profile() {
     const { user, token, logout } = useAuthStore();
+    const setCurrentTripPlan = useTripStore((state) => state.setCurrentTripPlan);
+    const setCurrentTripFormData = useTripStore((state) => state.setCurrentTripFormData);
     const navigate = useNavigate();
     
-    const [activeTab, setActiveTab] = useState<TabType>("hesabim");
+    const [activeTab] = useState<TabType>("hesabim");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [routeHistory, setRouteHistory] = useState<RouteHistoryResponse[]>([]);
@@ -130,6 +133,19 @@ export default function Profile() {
             console.error("Failed to delete trip:", err);
             setError(err instanceof Error ? err.message : "Trip silinemedi");
         }
+    };
+
+    const handleViewTrip = (trip: SavedTripResponse) => {
+        setCurrentTripPlan(trip.trip_plan);
+        setCurrentTripFormData({
+            city: trip.city,
+            days: trip.duration_days,
+            travelers: trip.travelers,
+            interests: trip.interests,
+            budget: trip.budget || "orta",
+            transport: trip.transport || "farketmez",
+        });
+        navigate("/trip-plan");
     };
 
     if (!user) {

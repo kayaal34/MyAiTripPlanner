@@ -6,18 +6,14 @@ interface RouteSummaryCardProps {
 }
 
 export default function RouteSummaryCard({ className }: RouteSummaryCardProps) {
-    // Zustand store'dan veri al
-    const city = useTripStore((state) => state.city);
-    const interests = useTripStore((state) => state.interests);
-    const stops = useTripStore((state) => state.stops);
-    const route = useTripStore((state) => state.route);
+    const formData = useTripStore((state) => state.currentTripFormData);
+    const tripPlan = useTripStore((state) => state.currentTripPlan);
 
-    // Eğer henüz rota yoksa gösterme
-    if (!route) {
+    if (!formData || !tripPlan) {
         return null;
     }
 
-    const modeLabel = route.mode === "walk" ? "Yürüyüş" : "Araç";
+    const days = tripPlan.trip_summary?.duration_days || formData.days;
 
     return (
         <div
@@ -30,29 +26,29 @@ export default function RouteSummaryCard({ className }: RouteSummaryCardProps) {
                 Rota Özeti
             </p>
             <h3 className="mt-1 text-lg font-semibold text-slate-900">
-                {city}
+                {formData.city}
             </h3>
 
             <dl className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between text-slate-600">
-                    <dt>Durak</dt>
-                    <dd>{stops} nokta</dd>
+                    <dt>Gun</dt>
+                    <dd>{days} gun</dd>
                 </div>
                 <div className="flex justify-between text-slate-600">
                     <dt>İlgi Alanı</dt>
-                    <dd className="truncate">{interests.join(", ")}</dd>
+                    <dd className="truncate">{formData.interests.join(", ")}</dd>
                 </div>
                 <div className="flex justify-between text-slate-600">
-                    <dt>Mesafe</dt>
-                    <dd>{route.distanceKm.toFixed(1)} km</dd>
+                    <dt>Yolcu</dt>
+                    <dd>{formData.travelers}</dd>
                 </div>
                 <div className="flex justify-between text-slate-600">
-                    <dt>Süre</dt>
-                    <dd>~{route.durationMinutes} dk</dd>
+                    <dt>Butce</dt>
+                    <dd>{formData.budget}</dd>
                 </div>
                 <div className="flex justify-between text-slate-600">
-                    <dt>Mod</dt>
-                    <dd>{modeLabel}</dd>
+                    <dt>Ulasim</dt>
+                    <dd>{formData.transport || "farketmez"}</dd>
                 </div>
             </dl>
 

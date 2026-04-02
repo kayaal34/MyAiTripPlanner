@@ -1,22 +1,7 @@
-import type { Place, RouteInfo, TravelMode } from "../type";
+import type { Place } from "../type";
 
 // Backend API base URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-
-// Request type - Backend'e göndereceğimiz data
-export type RouteRequest = {
-    city: string;
-    interests: string[];
-    stops: number;
-    mode: TravelMode;
-}
-
-// Response type - Backend'den gelecek data
-export type RouteResponse = {
-    places: Place[];
-    route: RouteInfo;
-    remaining_routes?: number; // Kullanıcının kalan rota hakkı
-}
 
 // API Error type
 export class ApiError extends Error {
@@ -28,66 +13,6 @@ export class ApiError extends Error {
         this.name = "ApiError";
         this.statusCode = statusCode;
         this.details = details;
-    }
-}
-
-/**
- * Backend'e rota isteği gönder
- * @param request - Form'dan gelen veriler (city, interests, stops, mode)
- * @param token - Optional JWT token for authenticated requests
- * @returns Promise<RouteResponse> - Backend'den gelen places ve route
- * @throws ApiError - API hatası durumunda
- */
-export async function fetchRoute(request: RouteRequest, token?: string): Promise<RouteResponse> {
-    try {
-        const headers: HeadersInit = {
-            "Content-Type": "application/json",
-        };
-
-        // Add auth token if available
-        if (token) {
-            headers["Authorization"] = `Bearer ${token}`;
-        }
-
-        // Backend'e POST isteği at
-        const response = await fetch(`${API_BASE_URL}/api/route`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify(request),
-        });
-
-        // Hata kontrolü
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new ApiError(
-                errorData.message || `HTTP Error: ${response.status}`,
-                response.status,
-                errorData
-            );
-        }
-
-        // Response'u parse et
-        const data: RouteResponse = await response.json();
-
-        // Validation - Backend'den gelen data doğru mu?
-        if (!data.places || !Array.isArray(data.places)) {
-            throw new ApiError("Invalid response: places array missing");
-        }
-        if (!data.route) {
-            throw new ApiError("Invalid response: route object missing");
-        }
-
-        return data;
-    } catch (error) {
-        // Network error veya parse error
-        if (error instanceof ApiError) {
-            throw error;
-        }
-        throw new ApiError(
-            "Network error: Could not connect to backend",
-            undefined,
-            error
-        );
     }
 }
 
@@ -128,6 +53,7 @@ export type UserResponse = {
     vacation_types?: string[];
     travel_style?: string;
     age_range?: string;
+    remaining_routes?: number;
 }
 
 /**
@@ -411,6 +337,7 @@ export type TripPlanRequest = {
     transport?: string;
     budget?: string;
     start_date?: string;
+    language?: string;
 }
 
 export type DailyActivity = {
@@ -491,17 +418,90 @@ export type DetailedTripItinerary = {
         local_customs: string;
         safety: string;
         money: string;
-        emergency_contacts: string;
+        emergency_contacts:
+            | string
+            | {
+                police?: string;
+                ambulance?: string;
+                fire?: string;
+                tourist_police?: string;
+            };
         useful_phrases: string[];
     };
     packing_list: string[];
     country_flag?: string; // REST Countries API'den gelen bayrak URL'i
+    city_image?: string;
 }
 
 export type DetailedTripResponse = {
     success: boolean;
     itinerary: DetailedTripItinerary;
+    remaining_routes?: number;
     message: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+}
+
+function asStringArray(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value.filter((item): item is string => typeof item === "string");
+}
+
+function toDetailedTripItinerary(value: unknown): DetailedTripItinerary {
+    if (!isRecord(value)) {
+        throw new ApiError("Invalid itinerary: response is not an object");
+    }
+
+    const summary = isRecord(value.trip_summary) ? value.trip_summary : {};
+    const generalTips = isRecord(value.general_tips) ? value.general_tips : {};
+    const emergencyContacts = isRecord(generalTips.emergency_contacts)
+        ? {
+            police: typeof generalTips.emergency_contacts.police === "string" ? generalTips.emergency_contacts.police : "",
+            ambulance: typeof generalTips.emergency_contacts.ambulance === "string" ? generalTips.emergency_contacts.ambulance : "",
+            fire: typeof generalTips.emergency_contacts.fire === "string" ? generalTips.emergency_contacts.fire : "",
+            tourist_police: typeof generalTips.emergency_contacts.tourist_police === "string" ? generalTips.emergency_contacts.tourist_police : "",
+        }
+        : (typeof generalTips.emergency_contacts === "string" ? generalTips.emergency_contacts : "");
+
+    return {
+        trip_summary: {
+            destination: typeof summary.destination === "string" ? summary.destination : "",
+            duration_days: typeof summary.duration_days === "number" ? summary.duration_days : 0,
+            travelers: typeof summary.travelers === "string" ? summary.travelers : "",
+            total_estimated_cost: typeof summary.total_estimated_cost === "string" ? summary.total_estimated_cost : "",
+            best_season: typeof summary.best_season === "string" ? summary.best_season : "",
+            weather_forecast: typeof summary.weather_forecast === "string" ? summary.weather_forecast : "",
+        },
+        daily_itinerary: Array.isArray(value.daily_itinerary) ? (value.daily_itinerary as DailyItinerary[]) : [],
+        accommodation_suggestions: Array.isArray(value.accommodation_suggestions)
+            ? (value.accommodation_suggestions as AccommodationSuggestion[])
+            : [],
+        general_tips: {
+            local_customs: typeof generalTips.local_customs === "string" ? generalTips.local_customs : "",
+            safety: typeof generalTips.safety === "string" ? generalTips.safety : "",
+            money: typeof generalTips.money === "string" ? generalTips.money : "",
+            emergency_contacts: emergencyContacts,
+            useful_phrases: asStringArray(generalTips.useful_phrases),
+        },
+        packing_list: asStringArray(value.packing_list),
+        country_flag: typeof value.country_flag === "string" ? value.country_flag : undefined,
+        city_image: typeof value.city_image === "string" ? value.city_image : undefined,
+    };
+}
+
+function toDetailedTripResponse(value: unknown): DetailedTripResponse {
+    if (!isRecord(value)) {
+        throw new ApiError("Invalid response: payload is not an object");
+    }
+
+    return {
+        success: Boolean(value.success),
+        itinerary: toDetailedTripItinerary(value.itinerary),
+        remaining_routes: typeof value.remaining_routes === "number" ? value.remaining_routes : undefined,
+        message: typeof value.message === "string" ? value.message : "",
+    };
 }
 
 /**
@@ -545,7 +545,8 @@ export async function createDetailedTripPlan(
             );
         }
 
-        return await response.json();
+        const rawData: unknown = await response.json();
+        return toDetailedTripResponse(rawData);
     } catch (error) {
         if (error instanceof ApiError) throw error;
         throw new ApiError("Network error creating trip plan", undefined, error);
@@ -608,8 +609,7 @@ export async function saveTripToFavorites(
                 transport: transport,
                 trip_plan: tripPlan,
                 is_saved: true,
-                name: name,
-                mode: "walk" // deprecated field
+                name: name
             }),
         });
 
