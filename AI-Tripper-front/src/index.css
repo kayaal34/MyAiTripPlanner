@@ -1,5 +1,4 @@
 @import "@fortawesome/fontawesome-free/css/all.min.css";
-@import "leaflet/dist/leaflet.css";
 
 @tailwind base;
 @tailwind components;
@@ -12,8 +11,13 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Poppins', sans-serif;
   }
 }
@@ -25,13 +29,13 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  
+
   .gradient-border {
     position: relative;
     background: white;
     border-radius: 1rem;
   }
-  
+
   .gradient-border::before {
     content: '';
     position: absolute;
@@ -128,6 +132,7 @@
     opacity: 0;
     transform: translateY(-50%) translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(-50%) translateX(0);
@@ -144,6 +149,7 @@
     opacity: 0;
     transform: scale(0.9) translateY(20px);
   }
+
   100% {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -155,6 +161,7 @@
     opacity: 0;
     backdrop-filter: blur(0px);
   }
+
   to {
     opacity: 1;
     backdrop-filter: blur(8px);
@@ -174,6 +181,7 @@
     opacity: 0;
     transform: translateX(50px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -183,6 +191,7 @@
 .animate-slide-in-right {
   animation: slide-in-right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 /* Custom Leaflet Popup Styles */
 .custom-popup .leaflet-popup-content-wrapper {
   padding: 0;
@@ -211,4 +220,3 @@
   color: #1e293b;
   background: transparent;
 }
-

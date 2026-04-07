@@ -75,11 +75,11 @@ export default function RouteForm() {
                         }
                     }
                 );
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     console.log('API Response:', data);
-                    
+
                     const cities = data
                         .map((item: any) => {
                             // Şehir adını al - display_name'den veya address'den
@@ -88,13 +88,13 @@ export default function RouteForm() {
 
                             if (item.address) {
                                 // Öncelik sırasına göre şehir adını bul
-                                cityName = item.address.city || 
-                                          item.address.town || 
-                                          item.address.village ||
-                                          item.address.municipality ||
-                                          item.address.state ||
-                                          item.name ||
-                                          '';
+                                cityName = item.address.city ||
+                                    item.address.town ||
+                                    item.address.village ||
+                                    item.address.municipality ||
+                                    item.address.state ||
+                                    item.name ||
+                                    '';
                                 country = item.address.country || '';
                             } else {
                                 // address yoksa display_name'den al
@@ -111,11 +111,11 @@ export default function RouteForm() {
                             return null;
                         })
                         .filter((value: string | null) => value !== null && value.length > 0)
-                        .filter((value: string, index: number, self: string[]) => 
+                        .filter((value: string, index: number, self: string[]) =>
                             self.indexOf(value) === index // Remove duplicates
                         )
                         .slice(0, 8);
-                    
+
                     console.log(`🔍 "${city}" için ${cities.length} şehir bulundu:`, cities);
                     setCitySuggestions(cities);
                     setShowSuggestions(cities.length > 0);
@@ -157,7 +157,7 @@ export default function RouteForm() {
         e.preventDefault();
 
         if (!city || !travelers || interests.length === 0) {
-            alert("Lütfen tüm alanları doldurun!");
+            alert("Пожалуйста, заполните все поля!");
             return;
         }
 
@@ -247,58 +247,56 @@ export default function RouteForm() {
     return (
         <form
             onSubmit={handleSubmit}
-            className="w-full bg-white sm:p-12 p-8 rounded-2xl shadow-xl border border-gray-100"
+            className="bg-white rounded-3xl shadow-2xl p-4 md:p-6 flex flex-col xl:flex-row items-center gap-4 xl:gap-0 divide-y xl:divide-y-0 xl:divide-x divide-gray-200 w-full"
         >
-            <h2 className="text-4xl font-display font-bold mb-10 text-gradient">
-                Создать план отпуска
-            </h2>
-
-            {/* Hedef */}
-            <div className="mb-8 relative">
-                <label className="block mb-3 text-sm font-semibold text-gray-700">
+            {/* Destination */}
+            <div className="flex-1 flex flex-col px-4 w-full text-left relative group">
+                <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
                     Направление
                 </label>
-                <input
-                    type="text"
-                    placeholder="Введите название города..."
-                    value={city}
-                    onChange={(e) => {
-                        setCity(e.target.value);
-                        setIsCitySelected(false); // Manuel yazarken seçimi iptal et
-                        setShowCityWarning(false); // Uyarıyı kaldır
-                    }}
-                    onFocus={() => {
-                        if (citySuggestions.length > 0) setShowSuggestions(true);
-                        setShowCityWarning(false);
-                    }}
-                    onBlur={() => {
-                        setTimeout(() => {
-                            setShowSuggestions(false);
-                            // Eğer şehir yazılmış ama seçilmemişse uyarı göster
-                            if (city.trim().length > 0 && !isCitySelected) {
-                                setShowCityWarning(true);
-                            }
-                        }, 200);
-                    }}
-                    className="w-full border-2 border-gray-200 py-3.5 px-5 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300"
-                    required
-                />
+                <div className="relative">
+                    <input
+                        type="text"
+                        placeholder="Где отдохнем?"
+                        value={city}
+                        onChange={(e) => {
+                            setCity(e.target.value);
+                            setIsCitySelected(false);
+                            setShowCityWarning(false);
+                        }}
+                        onFocus={() => {
+                            if (citySuggestions.length > 0) setShowSuggestions(true);
+                            setShowCityWarning(false);
+                        }}
+                        onBlur={() => {
+                            setTimeout(() => {
+                                setShowSuggestions(false);
+                                if (city.trim().length > 0 && !isCitySelected) {
+                                    setShowCityWarning(true);
+                                }
+                            }, 200);
+                        }}
+                        className="w-full appearance-none bg-transparent text-gray-800 placeholder-gray-400 text-base md:text-lg focus:outline-none pr-6"
+                        required
+                    />
+                    <i className="fas fa-map-marker-alt absolute right-0 top-1/2 -translate-y-1/2 text-gray-300 text-sm pointer-events-none"></i>
+                </div>
 
                 {/* City Suggestions Dropdown */}
                 {showSuggestions && citySuggestions.length > 0 && (
-                    <div className="absolute z-50 w-full mt-2 bg-white border-2 border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                    <div className="absolute z-50 w-[120%] top-full mt-4 -left-4 bg-white border border-gray-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto">
                         {citySuggestions.map((suggestion, index) => (
                             <button
                                 key={index}
                                 type="button"
                                 onClick={() => {
                                     setCity(suggestion);
-                                    setIsCitySelected(true); // Şehir seçildi
+                                    setIsCitySelected(true);
                                     setShowSuggestions(false);
                                 }}
-                                className="w-full text-left px-5 py-3 hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
+                                className="w-full text-left px-5 py-3 hover:bg-orange-50 transition-colors border-b border-gray-50 last:border-b-0"
                             >
-                                <div className="font-semibold text-gray-800">{suggestion}</div>
+                                <div className="font-semibold text-gray-800 text-sm">{suggestion}</div>
                             </button>
                         ))}
                     </div>
@@ -306,148 +304,182 @@ export default function RouteForm() {
 
                 {/* Loading indicator */}
                 {isLoadingSuggestions && (
-                    <div className="absolute right-4 top-11 text-gray-400">
-                        <div className="animate-spin">⏳</div>
-                    </div>
-                )}
-
-                {/* Selected City Preview */}
-                {isCitySelected && city.trim().length > 0 && (
-                    <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-blue-500 rounded-lg">
-                        <p className="text-sm text-gray-700">
-                            <span className="font-semibold text-blue-600">📍 Ваш план путешествия будет создан для:</span>
-                            <br />
-                            <span className="text-base font-bold text-gray-800 mt-1 inline-block">{city}</span>
-                        </p>
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                        <i className="fas fa-spinner fa-spin"></i>
                     </div>
                 )}
 
                 {/* City Selection Warning */}
                 {showCityWarning && !isCitySelected && city.trim().length > 0 && (
-                    <div className="mt-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg">
-                        <p className="text-sm text-red-700">
-                            <span className="font-semibold">⚠️ Пожалуйста, выберите город из списка</span>
+                    <div className="absolute z-40 w-[120%] top-full mt-4 -left-4 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-lg">
+                        <p className="text-xs text-red-700">
+                            <span className="font-bold">⚠️ Пожалуйста, выберите город из списка</span>
                         </p>
                     </div>
                 )}
             </div>
 
-            {/* Süre ve Kişi (Yan Yana) */}
-            <div className="grid grid-cols-2 gap-6 mb-8">
-                <div>
-                    <label className="block mb-3 text-sm font-semibold text-gray-700">
-                        Продолжительность поездки
-                    </label>
-                    <select
-                        value={days}
-                        onChange={(e) => setDays(e.target.value)}
-                        className="w-full border-2 border-gray-200 py-3.5 px-5 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 cursor-pointer"
-                    >
-                        {[1, 2, 3, 4, 5, 6, 7].map((d) => (
-                            <option key={d} value={d}>
-                                {d} {d === 1 ? "День" : d < 5 ? "Дня" : "Дней"}
-                            </option>
-                        ))}
-                    </select>
+            {/* Duration */}
+            <div className="flex-[0.8] flex flex-col px-4 w-full text-left mt-4 xl:mt-0 pt-4 xl:pt-0 relative group">
+                <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
+                    Дни
+                </label>
+                <div className="relative">
+                    <div className="w-full appearance-none bg-transparent text-gray-500 text-base md:text-lg hover:text-gray-800 transition-colors cursor-pointer pr-6">
+                        {days}
+                    </div>
+                    <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
                 </div>
 
-                <div>
-                    <label className="block mb-3 text-sm font-semibold text-gray-700">
-                        Кто едет?
-                    </label>
-                    <select
-                        value={travelers}
-                        onChange={(e) => setTravelers(e.target.value)}
-                        className="w-full border-2 border-gray-200 py-3.5 px-5 text-lg rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all hover:border-gray-300 cursor-pointer"
-                    >
-                        <option value="" disabled>
-                            Выберите...
-                        </option>
-                        <option value="Один">Один</option>
-                        <option value="С друзьями">С друзьями</option>
-                        <option value="С семьей">С семьей</option>
-                        <option value="Пара">Пара</option>
-                    </select>
+                {/* Custom Days Dropdown Menu */}
+                <div className="absolute z-50 w-full min-w-[150px] top-full left-0 mt-4 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                        {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+                            <button
+                                key={d}
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setDays(d.toString());
+                                    // Dropdown'un kapanması için anlık focus kaybı hilesi
+                                    (document.activeElement as HTMLElement)?.blur();
+                                }}
+                                className={`py-2 px-2 text-xs font-bold rounded-lg transition-all text-center ${days === d.toString()
+                                    ? "bg-orange-500 text-white"
+                                    : "bg-gray-50 text-gray-600 hover:bg-orange-50"
+                                    }`}
+                            >
+                                {d}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            {/* İlgi Alanları */}
-            <div className="mb-8">
-                <label className="block mb-4 text-sm font-semibold text-gray-700">
+            {/* Travelers */}
+            <div className="flex-1 flex flex-col px-4 w-full text-left mt-4 xl:mt-0 pt-4 xl:pt-0 relative group">
+                <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
+                    Кто едет?
+                </label>
+                <div className="relative">
+                    <div className="w-full appearance-none bg-transparent text-gray-500 text-base md:text-lg hover:text-gray-800 transition-colors cursor-pointer pr-6 truncate">
+                        {travelers || "Выберите..."}
+                    </div>
+                    <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+                </div>
+
+                {/* Custom Travelers Dropdown Menu */}
+                <div className="absolute z-50 w-full min-w-[200px] top-full left-0 mt-4 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                    <div className="grid grid-cols-2 gap-2">
+                        {["Один", "С друзьями", "С семьей", "Пара"].map((opt) => (
+                            <button
+                                key={opt}
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setTravelers(opt);
+                                    (document.activeElement as HTMLElement)?.blur();
+                                }}
+                                className={`py-2 px-2 text-xs font-bold rounded-lg transition-all text-center ${travelers === opt
+                                    ? "bg-orange-500 text-white"
+                                    : "bg-gray-50 text-gray-600 hover:bg-orange-50"
+                                    }`}
+                            >
+                                {opt}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Interests */}
+            <div className="flex-1 flex flex-col px-4 w-full text-left mt-4 xl:mt-0 pt-4 xl:pt-0 relative group">
+                <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
                     Интересы
                 </label>
-                <div className="grid grid-cols-3 gap-4">
-                    {interestOptions.map((interest) => (
-                        <button
-                            key={interest}
-                            type="button"
-                            onClick={() => toggleInterest(interest)}
-                            className={`py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${interests.includes(interest)
-                                ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg scale-105"
-                                : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
-                                }`}
-                        >
-                            {interest}
-                        </button>
-                    ))}
+                <div className="relative">
+                    <div className="w-full appearance-none bg-transparent text-gray-500 text-base md:text-lg hover:text-gray-800 transition-colors cursor-pointer pr-6 truncate">
+                        {interests.length > 0 ? `${interests.length} Выбрано` : "Выбрать..."}
+                    </div>
+                    <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+                </div>
+
+                {/* Custom Interests Dropdown Menu */}
+                <div className="absolute z-50 w-64 top-full left-0 mt-4 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                    <div className="grid grid-cols-2 gap-2">
+                        {interestOptions.map((interest) => (
+                            <button
+                                key={interest}
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    toggleInterest(interest);
+                                }}
+                                className={`py-2 px-2 text-xs font-bold rounded-lg transition-all ${interests.includes(interest)
+                                    ? "bg-orange-500 text-white"
+                                    : "bg-gray-50 text-gray-600 hover:bg-orange-50"
+                                    }`}
+                            >
+                                {interest}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            {/* Bütçe */}
-            <div className="mb-8">
-                <label className="block mb-3 text-sm font-semibold text-gray-700">
+            {/* Budget */}
+            <div className="flex-1 flex flex-col px-4 w-full text-left mt-4 xl:mt-0 pt-4 xl:pt-0 pb-4 xl:pb-0 relative group">
+                <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
                     Бюджет
                 </label>
-                <div className="flex gap-3">
-                    <button
-                        type="button"
-                        onClick={() => setBudget("ekonomik")}
-                        className={`flex-1 py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${
-                            budget === "ekonomik"
-                                ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg scale-105"
-                                : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-green-300 hover:bg-green-50"
-                        }`}
-                    >
-                        💰 Экономный
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setBudget("orta")}
-                        className={`flex-1 py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${
-                            budget === "orta"
-                                ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg scale-105"
-                                : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-yellow-300 hover:bg-yellow-50"
-                        }`}
-                    >
-                        💵 Средний
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setBudget("luks")}
-                        className={`flex-1 py-3.5 px-4 text-base font-semibold rounded-xl transition-all ${
-                            budget === "luks"
-                                ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg scale-105"
-                                : "bg-gray-50 border-2 border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50"
-                        }`}
-                    >
-                        💎 Люкс
-                    </button>
+                <div className="relative">
+                    <div className="w-full appearance-none bg-transparent text-gray-500 text-base md:text-lg hover:text-gray-800 transition-colors cursor-pointer pr-6 truncate">
+                        {budget === "ekonomik" ? "Экономный" : budget === "orta" ? "Средний" : "Люкс"}
+                    </div>
+                    <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+                </div>
+
+                {/* Custom Budget Dropdown Menu */}
+                <div className="absolute z-[60] w-full min-w-[140px] top-full right-0 xl:left-0 mt-4 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                    <div className="flex flex-col gap-1">
+                        {[
+                            { value: "ekonomik", label: "Экономный" },
+                            { value: "orta", label: "Средний" },
+                            { value: "luks", label: "Люкс" }
+                        ].map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setBudget(opt.value);
+                                    (document.activeElement as HTMLElement)?.blur();
+                                }}
+                                className={`py-2 px-3 text-sm font-bold rounded-xl transition-all text-left ${budget === opt.value
+                                    ? "bg-orange-50 text-orange-500"
+                                    : "bg-transparent text-gray-600 hover:bg-gray-50"
+                                    }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            {/* Submit Button */}
-            <div>
+            {/* Create Plan Button */}
+            <div className="px-4 w-full xl:w-auto mt-2 xl:mt-0 border-t xl:border-t-0 border-gray-200 pt-4 xl:pt-0">
                 <button
                     type="submit"
                     disabled={normalLoading || !token}
-                    className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl text-xl font-bold transition-all shadow-lg hover:shadow-2xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full xl:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 md:py-4 px-6 md:px-8 rounded-2xl transition-all shadow-lg shadow-orange-500/30 text-base md:text-lg flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
-                    {normalLoading ? "🔄 Plan Hazırlanıyor..." : "🗓️ Detaylı Gün Gün Plan Oluştur"}
+                    <i className={normalLoading ? "fas fa-spinner fa-spin" : "fas fa-magic"}></i>
+                    {normalLoading ? "Загрузка..." : "Создать план"}
                 </button>
-
                 {!token && (
-                    <p className="text-center text-sm text-red-500 mt-2">
-                        ⚠️ Plan oluşturmak için giriş yapmalısınız
+                    <p className="text-center text-[10px] text-red-500 mt-2 xl:absolute xl:-bottom-6 xl:right-6 whitespace-nowrap">
+                        ⚠️ Требуется вход
                     </p>
                 )}
             </div>

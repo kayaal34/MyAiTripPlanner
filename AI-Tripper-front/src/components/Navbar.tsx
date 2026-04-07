@@ -4,6 +4,7 @@ import { LogIn, User, Settings, Heart, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { getCurrentUser } from "../services/api";
+import logoImg from "../assets/logo.png";
 
 interface NavbarProps {
     onAuthClick?: () => void;
@@ -56,9 +57,9 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
         <motion.div
             initial={{ y: -100 }}
             animate={{ y: 0 }}
-            className={`fixed top-0 left-0 w-full flex items-center justify-between px-12 z-50 shadow-sm transition-all h-20 ${transparent
-                ? "bg-white/90 backdrop-blur-xl"
-                : "bg-white/95 backdrop-blur-xl"
+            className={`fixed top-0 left-0 w-full flex items-center justify-between px-12 z-50 transition-all duration-300 h-20 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border-b border-gray-200/30 ${transparent
+                ? "bg-gray-100/20 backdrop-blur-md"
+                : "bg-gray-200/40 backdrop-blur-xl"
                 }`}
         >
             {/* Logo - Left */}
@@ -66,13 +67,11 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                 onClick={() => navigate("/")}
                 className="flex items-center gap-3 cursor-pointer group flex-shrink-0"
             >
-                <div className="relative w-10 h-10 bg-gradient-to-br from-blue-500 via-blue-600 to-purple-500 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md transition-all group-hover:scale-105">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                <div className="relative w-14 h-14 flex items-center justify-center transition-all group-hover:scale-105 overflow-hidden rounded-lg">
+                    <img src={logoImg} alt="Logo" className="w-full h-full object-cover" />
                 </div>
                 <h1 className="text-xl font-display font-bold text-gray-800 group-hover:text-blue-600 transition-all">
-                    tatilplanlama
+                    mytripplanner
                 </h1>
             </div>
 
@@ -82,14 +81,14 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                     onClick={() => navigate("/")}
                     className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-[15px]"
                 >
-                    Ana Sayfa
+                    Главная страница
                 </button>
 
                 <button
                     onClick={() => navigate("/destinations")}
                     className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-[15px]"
                 >
-                    Tatil Şehirleri
+                    Города отдыха
                 </button>
 
                 <button
@@ -97,7 +96,7 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                     className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-[15px] flex items-center gap-1.5"
                 >
                     <span className="text-yellow-500"></span>
-                    Premium
+                    Подписки
                 </button>
 
                 {/* Kurumsal Dropdown */}
@@ -107,7 +106,7 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                     onMouseLeave={() => setShowKurumsalDropdown(false)}
                 >
                     <button className="text-gray-700 hover:text-blue-600 font-medium transition-colors flex items-center gap-1 text-[15px]">
-                        Kurumsal
+                        Институциональный
                         <svg className={`w-3.5 h-3.5 transition-transform ${showKurumsalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
@@ -120,7 +119,7 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                             animate={{ opacity: 1, y: 0 }}
                             className="absolute top-full left-0 pt-2 w-56"
                         >
-                            <div className="bg-white/95 backdrop-blur-xl rounded-xl shadow-xl overflow-hidden border border-gray-100">
+                            <div className="bg-gray-100/60 backdrop-blur-2xl rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-gray-200/50 overflow-hidden">
                                 <button
                                     onClick={() => navigate("/about")}
                                     className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all font-medium text-[15px]"
@@ -194,7 +193,7 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                                     animate={{ opacity: 1, y: 0 }}
                                     className="absolute top-full right-0 pt-2 w-56"
                                 >
-                                    <div className="bg-white/95 backdrop-blur-xl rounded-xl shadow-xl overflow-hidden border border-gray-100">
+                                    <div className="bg-gray-100/60 backdrop-blur-2xl rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-gray-200/50 overflow-hidden">
                                         <button
                                             onClick={() => {
                                                 navigate("/profile");
