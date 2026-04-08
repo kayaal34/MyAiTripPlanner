@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from typing import Any
@@ -108,13 +109,8 @@ async def get_country_context(city: str) -> tuple[str, str]:
         common_name = country.get("name", {}).get("common", country_name)
 
         context = (
-            f"Country context for {common_name}:\\n"
-            f"- Capital: {capital}\\n"
-            f"- Languages: {languages}\\n"
-            f"- Currency: {currencies}\\n"
-            f"- Timezone: {timezone}\\n"
-            f"- Region: {region} / {subregion}\\n"
-            "Use this context to keep pricing, local tips, and emergency info realistic."
+            f"Country: {common_name}. Capital: {capital}. Languages: {languages}. "
+            f"Currency: {currencies}. Timezone: {timezone}. Region: {region} / {subregion}."
         )
         return (context, flag_url)
     except Exception as exc:
@@ -141,7 +137,7 @@ async def generate_detailed_trip_itinerary(trip_data: dict):
     start_date = trip_data.get("start_date", "")
     target_language = (trip_data.get("language") or "Turkish").strip() or "Turkish"
 
-    country_context, country_flag = await get_country_context(city)
+    _, country_flag = await get_country_context(city)
 
     interests_text = ", ".join(interests) if interests else "general tourism"
 
@@ -161,25 +157,20 @@ async def generate_detailed_trip_itinerary(trip_data: dict):
     budget_context = budget_guides.get(str(budget).lower(), "mid-range")
 
     prompt = f"""
-You are an expert local travel planner.
-Create a realistic {days}-day travel itinerary for {city}.
+Create a {days}-day travel itinerary for {city} in {target_language}.
+Return only one JSON object.
 
-Hard requirements:
-1) Return ONLY one valid JSON object.
-2) Do NOT include markdown, code fences, backticks, comments, or explanation text.
-3) Keep all user-facing itinerary content in {target_language}.
-4) Keep place and restaurant names real and geographically plausible.
-5) Include realistic addresses and coordinates whenever possible.
-6) Keep costs and suggestions aligned with a {budget_context} budget.
-7) Consider traveler type: {traveler_context}
-8) Interests: {interests_text}
-9) Preferred transport: {transport}
-10) Start date (if present): {start_date or 'not provided'}
-11) Keep each activity description short: maximum 12 words.
+Rules:
+- Use real, geographically plausible places.
+- Keep descriptions very short.
+- Match a {budget_context} budget.
+- Traveler type: {traveler_context}
+- Interests: {interests_text}
+- Transport: {transport}
+- Start date: {start_date or 'not provided'}
+- Keep the itinerary practical and concise.
 
-{country_context}
-
-JSON schema to follow exactly (only these top-level keys):
+JSON shape:
 {{
     "trip_summary": {{
         "destination": "string",
@@ -224,7 +215,7 @@ JSON schema to follow exactly (only these top-level keys):
             "temperature": 0.5,
             "topP": 0.95,
             "topK": 40,
-            "maxOutputTokens": 8192,
+            "maxOutputTokens": 4096,
             "response_mime_type": "application/json",
         },
         "safetySettings": [
@@ -237,27 +228,47 @@ JSON schema to follow exactly (only these top-level keys):
 
     timeout = httpx.Timeout(connect=30.0, read=120.0, write=30.0, pool=30.0)
 
-    try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(url, headers={"Content-Type": "application/json"}, json=payload)
-    except httpx.ConnectTimeout:
-        raise HTTPException(
-            status_code=504,
-            detail="Could not connect to Gemini API. Please try again.",
-        )
-    except httpx.ReadTimeout:
-        raise HTTPException(
-            status_code=504,
-            detail="Gemini API timed out. Try fewer days and retry.",
-        )
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=500, detail=f"Gemini request failed: {exc}")
+    response = None
+    last_error_detail = None
+    for attempt in range(4):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post(url, headers={"Content-Type": "application/json"}, json=payload)
+        except httpx.ConnectTimeout:
+            raise HTTPException(
+                status_code=504,
+                detail="Could not connect to Gemini API. Please try again.",
+            )
+        except httpx.ReadTimeout:
+            raise HTTPException(
+                status_code=504,
+                detail="Gemini API timed out. Try fewer days and retry.",
+            )
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=500, detail=f"Gemini request failed: {exc}")
 
-    if response.status_code != 200:
+        if response.status_code == 200:
+            break
+
+        response_text = response.text[:500]
+        last_error_detail = f"Gemini API error ({response.status_code}): {response_text}"
+        if response.status_code in {429, 503} and attempt < 3:
+            await asyncio.sleep(2 ** attempt)
+            continue
+
+        if response.status_code not in {429, 503}:
+            raise HTTPException(
+                status_code=503 if response.status_code in {429, 503} else 500,
+                detail=last_error_detail,
+            )
+
         raise HTTPException(
-            status_code=500,
-            detail=f"Gemini API error ({response.status_code}).",
+            status_code=503 if response.status_code in {429, 503} else 500,
+            detail=last_error_detail,
         )
+
+    if response is None:
+        raise HTTPException(status_code=500, detail="Gemini API request failed before a response was received.")
 
     data = response.json()
     candidates = data.get("candidates", [])
@@ -282,66 +293,3 @@ JSON schema to follow exactly (only these top-level keys):
 
     return itinerary
 
-
-async def generate_mock_trip_itinerary(trip_data: dict) -> dict[str, Any]:
-    """Backup itinerary generator used when AI providers are unavailable."""
-
-    city = trip_data.get("city", "Istanbul")
-    days = int(trip_data.get("days", 3))
-    travelers = trip_data.get("travelers", "yalniz")
-
-    daily_itinerary = []
-    for day in range(1, days + 1):
-        daily_itinerary.append(
-            {
-                "day": day,
-                "date": "",
-                "title": f"Day {day} in {city}",
-                "activities": [
-                    {
-                        "time": "09:00",
-                        "name": "City Center Walk",
-                        "type": "sightseeing",
-                        "address": city,
-                        "coordinates": {"lat": 0.0, "lng": 0.0},
-                        "duration": "2h",
-                        "cost": "N/A",
-                        "description": "Explore central highlights.",
-                    },
-                    {
-                        "time": "13:00",
-                        "name": "Local Lunch",
-                        "type": "food",
-                        "address": city,
-                        "coordinates": {"lat": 0.0, "lng": 0.0},
-                        "duration": "1h",
-                        "cost": "N/A",
-                        "description": "Try popular local dishes.",
-                    },
-                    {
-                        "time": "17:00",
-                        "name": "Evening Landmark Visit",
-                        "type": "attraction",
-                        "address": city,
-                        "coordinates": {"lat": 0.0, "lng": 0.0},
-                        "duration": "2h",
-                        "cost": "N/A",
-                        "description": "Visit a signature spot.",
-                    },
-                ],
-                "estimated_daily_budget": "N/A",
-                "transportation_note": "Use local transit or walking.",
-            }
-        )
-
-    return {
-        "trip_summary": {
-            "destination": city,
-            "duration_days": days,
-            "travelers": travelers,
-            "total_estimated_cost": "N/A",
-            "best_season": "N/A",
-            "weather_forecast": "N/A",
-        },
-        "daily_itinerary": daily_itinerary,
-    }

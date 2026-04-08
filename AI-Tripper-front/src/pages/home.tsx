@@ -1,7 +1,6 @@
 import RouteForm from "../components/RouteForm";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
-import SocialTiles from "../components/SocialTiles";
 import FAQ from "../components/FAQ";
 import AuthModal from "../components/AuthModal";
 import MapView from "../components/MapView";

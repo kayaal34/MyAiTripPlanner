@@ -1,16 +1,15 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import LoadingModal from "./LoadingModal";
 import { createDetailedTripPlan } from "../services/api";
 import { useAuthStore } from "../store/useAuthStore";
 import { useTripStore } from "../store/useTripStore";
-import LoadingModal from "./LoadingModal";
 
-// Rusça -> İngilizce çeviriler (Backend'e gönderilecek)
 const TRAVELERS_MAP: Record<string, string> = {
     "Один": "yalniz",
     "Пара": "cift",
     "С семьей": "aile",
-    "С друзьями": "arkadaslar"
+    "С друзьями": "arkadaslar",
 };
 
 const INTERESTS_MAP: Record<string, string> = {
@@ -19,7 +18,20 @@ const INTERESTS_MAP: Record<string, string> = {
     "Вкус": "yemek",
     "Природа": "doga",
     "Приключения": "macera",
-    "Романтика": "romantik"
+    "Романтика": "romantik",
+};
+
+type NominatimResult = {
+    address?: {
+        city?: string;
+        town?: string;
+        village?: string;
+        municipality?: string;
+        state?: string;
+        country?: string;
+    };
+    display_name?: string;
+    name?: string;
 };
 
 export default function RouteForm() {
@@ -27,6 +39,7 @@ export default function RouteForm() {
     const { token, user, updateUser } = useAuthStore();
     const setCurrentTripPlan = useTripStore((state) => state.setCurrentTripPlan);
     const setCurrentTripFormData = useTripStore((state) => state.setCurrentTripFormData);
+
     const [city, setCity] = useState("");
     const [days, setDays] = useState("3");
     const [travelers, setTravelers] = useState("");
@@ -36,14 +49,12 @@ export default function RouteForm() {
     const [currentLoadingMessage, setCurrentLoadingMessage] = useState("Plan hazırlanıyor...");
     const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
-    // City autocomplete states
     const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
     const [isCitySelected, setIsCitySelected] = useState(false);
     const [showCityWarning, setShowCityWarning] = useState(false);
 
-    // Fetch city suggestions from OpenStreetMap Nominatim API (free, no key required)
     useEffect(() => {
         if (city.trim().length < 1) {
             setCitySuggestions([]);
@@ -54,78 +65,65 @@ export default function RouteForm() {
         const timeoutId = setTimeout(async () => {
             setIsLoadingSuggestions(true);
             try {
-                // Normalize Turkish characters for better search
                 const searchQuery = city
-                    .replace(/İ/g, 'I')
-                    .replace(/ı/g, 'i')
-                    .replace(/Ş/g, 'S')
-                    .replace(/ş/g, 's')
-                    .replace(/Ğ/g, 'G')
-                    .replace(/ğ/g, 'g')
-                    .replace(/Ü/g, 'U')
-                    .replace(/ü/g, 'u')
-                    .replace(/Ö/g, 'O')
-                    .replace(/ö/g, 'o')
-                    .replace(/Ç/g, 'C')
-                    .replace(/ç/g, 'c');
+                    .replace(/İ/g, "I")
+                    .replace(/ı/g, "i")
+                    .replace(/Ş/g, "S")
+                    .replace(/ş/g, "s")
+                    .replace(/Ğ/g, "G")
+                    .replace(/ğ/g, "g")
+                    .replace(/Ü/g, "U")
+                    .replace(/ü/g, "u")
+                    .replace(/Ö/g, "O")
+                    .replace(/ö/g, "o")
+                    .replace(/Ç/g, "C")
+                    .replace(/ç/g, "c");
 
                 const response = await fetch(
                     `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=15&addressdetails=1`,
-                    {
-                        headers: {
-                            'User-Agent': 'AI-Trip-Planner'
-                        }
-                    }
+                    { headers: { "User-Agent": "AI-Trip-Planner" } }
                 );
 
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('API Response:', data);
-
-                    const cities = data
-                        .map((item: any) => {
-                            // Şehir adını al - display_name'den veya address'den
-                            let cityName = '';
-                            let country = '';
-
-                            if (item.address) {
-                                // Öncelik sırasına göre şehir adını bul
-                                cityName = item.address.city ||
-                                    item.address.town ||
-                                    item.address.village ||
-                                    item.address.municipality ||
-                                    item.address.state ||
-                                    item.name ||
-                                    '';
-                                country = item.address.country || '';
-                            } else {
-                                // address yoksa display_name'den al
-                                const parts = item.display_name.split(',');
-                                cityName = parts[0]?.trim() || '';
-                                country = parts[parts.length - 1]?.trim() || '';
-                            }
-
-                            if (cityName && country && cityName !== country) {
-                                return `${cityName}, ${country}`;
-                            } else if (cityName) {
-                                return cityName;
-                            }
-                            return null;
-                        })
-                        .filter((value: string | null) => value !== null && value.length > 0)
-                        .filter((value: string, index: number, self: string[]) =>
-                            self.indexOf(value) === index // Remove duplicates
-                        )
-                        .slice(0, 8);
-
-                    console.log(`🔍 "${city}" için ${cities.length} şehir bulundu:`, cities);
-                    setCitySuggestions(cities);
-                    setShowSuggestions(cities.length > 0);
-                } else {
-                    console.error('API yanıt hatası:', response.status);
+                if (!response.ok) {
                     setCitySuggestions([]);
                     setShowSuggestions(false);
+                    return;
                 }
+
+                const data: NominatimResult[] = await response.json();
+                const cities = data
+                    .map((item) => {
+                        let cityName = "";
+                        let country = "";
+
+                        if (item.address) {
+                            cityName =
+                                item.address.city ||
+                                item.address.town ||
+                                item.address.village ||
+                                item.address.municipality ||
+                                item.address.state ||
+                                item.name ||
+                                "";
+                            country = item.address.country || "";
+                        } else if (item.display_name) {
+                            const parts = item.display_name.split(",");
+                            cityName = parts[0]?.trim() || "";
+                            country = parts[parts.length - 1]?.trim() || "";
+                        }
+
+                        if (cityName && country && cityName !== country) {
+                            return `${cityName}, ${country}`;
+                        }
+
+                        return cityName || null;
+                    })
+                    .filter((value): value is string => value !== null && value.length > 0)
+                    .filter((value, index, self) => self.indexOf(value) === index)
+                    .slice(0, 8);
+
+                setCitySuggestions(cities);
+                setShowSuggestions(cities.length > 0);
             } catch (error) {
                 console.error("City fetch error:", error);
                 setCitySuggestions([]);
@@ -133,7 +131,7 @@ export default function RouteForm() {
             } finally {
                 setIsLoadingSuggestions(false);
             }
-        }, 300); // 300ms debounce
+        }, 300);
 
         return () => clearTimeout(timeoutId);
     }, [city]);
@@ -149,19 +147,14 @@ export default function RouteForm() {
 
     const toggleInterest = (interest: string) => {
         setInterests((prev) =>
-            prev.includes(interest)
-                ? prev.filter((i) => i !== interest)
-                : [...prev, interest]
+            prev.includes(interest) ? prev.filter((i) => i !== interest) : [...prev, interest]
         );
     };
 
     const goToNextStep = () => {
-        if (currentStep === 1) {
-            if (!city.trim() || !isCitySelected) {
-                setShowCityWarning(true);
-                return;
-            }
-            setShowCityWarning(false);
+        if (currentStep === 1 && (!city.trim() || !isCitySelected)) {
+            setShowCityWarning(true);
+            return;
         }
 
         if (currentStep < 3) {
@@ -190,14 +183,13 @@ export default function RouteForm() {
 
         setNormalLoading(true);
 
-        // Yükleme mesajları
         const messages = [
             "🔍 Form verileri işleniyor...",
             `🌍 ${city} için detaylı plan hazırlanıyor...`,
             "🤖 En popüler mekanlar araştırıyor...",
             "🍽️ Restoran önerileri hazırlanıyor...",
             "🗺️ Her gün için rota oluşturuluyor...",
-            "✨ Son detaylar ekleniyor..."
+            "✨ Son detaylar ekleniyor...",
         ];
 
         let messageIndex = 0;
@@ -209,47 +201,31 @@ export default function RouteForm() {
         }, 2000);
 
         try {
-            // Backend'e gönderilecek verileri hazırla
             const travelersValue = TRAVELERS_MAP[travelers] || "yalniz";
             const transportValue = "farketmez";
-            const interestsValues = interests.map(i => INTERESTS_MAP[i] || i.toLowerCase());
+            const interestsValues = interests.map((interest) => INTERESTS_MAP[interest] || interest.toLowerCase());
 
-            console.log("📤 API'ye gönderilen veriler:", {
-                city,
-                days: parseInt(days),
-                travelers: travelersValue,
-                interests: interestsValues,
-                transport: transportValue,
-                budget: budget
-            });
-
-            // Yeni API'yi çağır
-            const response = await createDetailedTripPlan({
-                city,
-                days: parseInt(days),
-                travelers: travelersValue,
-                interests: interestsValues,
-                transport: transportValue,
-                budget: budget,
-                language: "Russian"
-            }, token);
+            const response = await createDetailedTripPlan(
+                {
+                    city,
+                    days: parseInt(days),
+                    travelers: travelersValue,
+                    interests: interestsValues,
+                    transport: transportValue,
+                    budget,
+                    language: "Russian",
+                },
+                token
+            );
 
             clearInterval(messageInterval);
             setNormalLoading(false);
             setCurrentLoadingMessage("Plan hazırlanıyor...");
 
-            console.log("✅ Plan oluşturuldu:", response.itinerary);
-
-            // Kalan krediyi güncelle
             if (response.remaining_routes !== undefined && user) {
-                updateUser({
-                    ...user,
-                    remaining_routes: response.remaining_routes
-                });
-                console.log("✅ Kredi güncellendi:", response.remaining_routes);
+                updateUser({ ...user, remaining_routes: response.remaining_routes });
             }
 
-            // Store'a kaydet ve sonuç sayfasına yönlendir
             setCurrentTripPlan(response.itinerary);
             setCurrentTripFormData({
                 city,
@@ -257,16 +233,17 @@ export default function RouteForm() {
                 travelers: travelersValue,
                 interests: interestsValues,
                 transport: transportValue,
-                budget: budget
+                budget,
             });
             navigate("/trip-plan");
-
-        } catch (error: any) {
+        } catch (error: unknown) {
             clearInterval(messageInterval);
             setNormalLoading(false);
             setCurrentLoadingMessage("Plan hazırlanıyor...");
+
+            const message = error instanceof Error ? error.message : "Plan oluşturulamadı. Lütfen tekrar deneyin.";
             console.error("❌ Plan oluşturma hatası:", error);
-            alert(`Hata: ${error.message || "Plan oluşturulamadı. Lütfen tekrar deneyin."}`);
+            alert(`Hata: ${message}`);
         }
     };
 
@@ -281,37 +258,6 @@ export default function RouteForm() {
             }}
             className="bg-white rounded-3xl shadow-2xl p-4 md:p-8 w-full"
         >
-<<<<<<< Updated upstream
-            {/* Destination */}
-            <div className="flex-[1.5] xl:flex-[2] flex flex-col px-4 w-full text-left relative group">
-                <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
-                    Направление
-                </label>
-                <div className="relative">
-                    <input
-                        type="text"
-                        placeholder="Где отдохнем?"
-                        value={city}
-                        onChange={(e) => {
-                            setCity(e.target.value);
-                            setIsCitySelected(false);
-                            setShowCityWarning(false);
-                        }}
-                        onFocus={() => {
-                            if (citySuggestions.length > 0) setShowSuggestions(true);
-                            setShowCityWarning(false);
-                        }}
-                        onBlur={() => {
-                            setTimeout(() => {
-                                setShowSuggestions(false);
-                                if (city.trim().length > 0 && !isCitySelected) {
-                                    setShowCityWarning(true);
-                                }
-                            }, 200);
-                        }}
-                        className="w-full appearance-none bg-transparent text-gray-800 placeholder-gray-400 text-base md:text-lg focus:outline-none pr-6 text-ellipsis overflow-hidden whitespace-nowrap"
-                        required
-=======
             <div className="mb-8">
                 <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-semibold text-gray-600">Step {currentStep} of 3</p>
@@ -321,7 +267,6 @@ export default function RouteForm() {
                     <div
                         className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-500 ease-out"
                         style={{ width: `${(currentStep / 3) * 100}%` }}
->>>>>>> Stashed changes
                     />
                 </div>
             </div>
@@ -398,13 +343,9 @@ export default function RouteForm() {
                 {currentStep === 2 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-[fadeIn_.25s_ease]">
                         <div className="relative group rounded-2xl border border-gray-200 p-5">
-                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">
-                                Дни
-                            </label>
+                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">Дни</label>
                             <div className="relative">
-                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6">
-                                    {days}
-                                </div>
+                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6">{days}</div>
                                 <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
                             </div>
                             <div className="absolute z-50 w-full left-0 top-full mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
@@ -418,10 +359,7 @@ export default function RouteForm() {
                                                 setDays(d.toString());
                                                 (document.activeElement as HTMLElement)?.blur();
                                             }}
-                                            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all text-center ${days === d.toString()
-                                                ? "bg-orange-500 text-white"
-                                                : "bg-gray-50 text-gray-600 hover:bg-orange-50"
-                                                }`}
+                                            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all text-center ${days === d.toString() ? "bg-orange-500 text-white" : "bg-gray-50 text-gray-600 hover:bg-orange-50"}`}
                                         >
                                             {d}
                                         </button>
@@ -431,13 +369,9 @@ export default function RouteForm() {
                         </div>
 
                         <div className="relative group rounded-2xl border border-gray-200 p-5">
-                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">
-                                Кто едет?
-                            </label>
+                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">Кто едет?</label>
                             <div className="relative">
-                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6 truncate">
-                                    {travelers || "Выберите..."}
-                                </div>
+                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6 truncate">{travelers || "Выберите..."}</div>
                                 <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
                             </div>
                             <div className="absolute z-50 w-full left-0 top-full mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
@@ -451,10 +385,7 @@ export default function RouteForm() {
                                                 setTravelers(opt);
                                                 (document.activeElement as HTMLElement)?.blur();
                                             }}
-                                            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all text-center ${travelers === opt
-                                                ? "bg-orange-500 text-white"
-                                                : "bg-gray-50 text-gray-600 hover:bg-orange-50"
-                                                }`}
+                                            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all text-center ${travelers === opt ? "bg-orange-500 text-white" : "bg-gray-50 text-gray-600 hover:bg-orange-50"}`}
                                         >
                                             {opt}
                                         </button>
@@ -468,13 +399,9 @@ export default function RouteForm() {
                 {currentStep === 3 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-[fadeIn_.25s_ease]">
                         <div className="relative group rounded-2xl border border-gray-200 p-5">
-                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">
-                                Интересы
-                            </label>
+                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">Интересы</label>
                             <div className="relative">
-                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6 truncate">
-                                    {interests.length > 0 ? `${interests.length} Выбрано` : "Выбрать..."}
-                                </div>
+                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6 truncate">{interests.length > 0 ? `${interests.length} Выбрано` : "Выбрать..."}</div>
                                 <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
                             </div>
                             <div className="absolute z-50 w-full top-full left-0 mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
@@ -487,10 +414,7 @@ export default function RouteForm() {
                                                 e.preventDefault();
                                                 toggleInterest(interest);
                                             }}
-                                            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all ${interests.includes(interest)
-                                                ? "bg-orange-500 text-white"
-                                                : "bg-gray-50 text-gray-600 hover:bg-orange-50"
-                                                }`}
+                                            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all ${interests.includes(interest) ? "bg-orange-500 text-white" : "bg-gray-50 text-gray-600 hover:bg-orange-50"}`}
                                         >
                                             {interest}
                                         </button>
@@ -500,13 +424,9 @@ export default function RouteForm() {
                         </div>
 
                         <div className="relative group rounded-2xl border border-gray-200 p-5">
-                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">
-                                Бюджет
-                            </label>
+                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">Бюджет</label>
                             <div className="relative">
-                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6 truncate">
-                                    {budget === "ekonomik" ? "Экономный" : budget === "orta" ? "Средний" : "Люкс"}
-                                </div>
+                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6 truncate">{budget === "ekonomik" ? "Экономный" : budget === "orta" ? "Средний" : "Люкс"}</div>
                                 <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
                             </div>
                             <div className="absolute z-[60] w-full left-0 top-full mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
@@ -514,7 +434,7 @@ export default function RouteForm() {
                                     {[
                                         { value: "ekonomik", label: "Экономный" },
                                         { value: "orta", label: "Средний" },
-                                        { value: "luks", label: "Люкс" }
+                                        { value: "luks", label: "Люкс" },
                                     ].map((opt) => (
                                         <button
                                             key={opt.value}
@@ -524,10 +444,7 @@ export default function RouteForm() {
                                                 setBudget(opt.value);
                                                 (document.activeElement as HTMLElement)?.blur();
                                             }}
-                                            className={`py-2 px-3 text-sm font-bold rounded-xl transition-all text-left ${budget === opt.value
-                                                ? "bg-orange-50 text-orange-500"
-                                                : "bg-transparent text-gray-600 hover:bg-gray-50"
-                                                }`}
+                                            className={`py-2 px-3 text-sm font-bold rounded-xl transition-all text-left ${budget === opt.value ? "bg-orange-50 text-orange-500" : "bg-transparent text-gray-600 hover:bg-gray-50"}`}
                                         >
                                             {opt.label}
                                         </button>
@@ -539,160 +456,7 @@ export default function RouteForm() {
                 )}
             </div>
 
-<<<<<<< Updated upstream
-            {/* Duration */}
-            <div className="flex-[0.6] flex flex-col px-4 w-full text-left mt-4 xl:mt-0 pt-4 xl:pt-0 relative group">
-                <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
-                    Дни
-                </label>
-                <div className="relative">
-                    <div className="w-full appearance-none bg-transparent text-gray-500 text-base md:text-lg hover:text-gray-800 transition-colors cursor-pointer pr-6">
-                        {days}
-                    </div>
-                    <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
-                </div>
-
-                {/* Custom Days Dropdown Menu */}
-                <div className="absolute z-50 w-full min-w-[150px] top-full left-0 mt-4 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
-                        {[1, 2, 3, 4, 5, 6, 7].map((d) => (
-                            <button
-                                key={d}
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setDays(d.toString());
-                                    // Dropdown'un kapanması için anlık focus kaybı hilesi
-                                    (document.activeElement as HTMLElement)?.blur();
-                                }}
-                                className={`py-2 px-2 text-xs font-bold rounded-lg transition-all text-center ${days === d.toString()
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-gray-50 text-gray-600 hover:bg-orange-50"
-                                    }`}
-                            >
-                                {d}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Travelers */}
-            <div className="flex-1 flex flex-col px-4 w-full text-left mt-4 xl:mt-0 pt-4 xl:pt-0 relative group">
-                <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
-                    Кто едет?
-                </label>
-                <div className="relative">
-                    <div className="w-full appearance-none bg-transparent text-gray-500 text-base md:text-lg hover:text-gray-800 transition-colors cursor-pointer pr-6 truncate">
-                        {travelers || "Выберите..."}
-                    </div>
-                    <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
-                </div>
-
-                {/* Custom Travelers Dropdown Menu */}
-                <div className="absolute z-50 w-full min-w-[200px] top-full left-0 mt-4 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                    <div className="grid grid-cols-2 gap-2">
-                        {["Один", "С друзьями", "С семьей", "Пара"].map((opt) => (
-                            <button
-                                key={opt}
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setTravelers(opt);
-                                    (document.activeElement as HTMLElement)?.blur();
-                                }}
-                                className={`py-2 px-2 text-xs font-bold rounded-lg transition-all text-center ${travelers === opt
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-gray-50 text-gray-600 hover:bg-orange-50"
-                                    }`}
-                            >
-                                {opt}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Interests */}
-            <div className="flex-1 flex flex-col px-4 w-full text-left mt-4 xl:mt-0 pt-4 xl:pt-0 relative group">
-                <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
-                    Интересы
-                </label>
-                <div className="relative">
-                    <div className="w-full appearance-none bg-transparent text-gray-500 text-base md:text-lg hover:text-gray-800 transition-colors cursor-pointer pr-6 truncate">
-                        {interests.length > 0 ? `${interests.length} Выбрано` : "Выбрать..."}
-                    </div>
-                    <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
-                </div>
-
-                {/* Custom Interests Dropdown Menu */}
-                <div className="absolute z-50 w-64 top-full left-0 mt-4 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                    <div className="grid grid-cols-2 gap-2">
-                        {interestOptions.map((interest) => (
-                            <button
-                                key={interest}
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    toggleInterest(interest);
-                                }}
-                                className={`py-2 px-2 text-xs font-bold rounded-lg transition-all ${interests.includes(interest)
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-gray-50 text-gray-600 hover:bg-orange-50"
-                                    }`}
-                            >
-                                {interest}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Budget */}
-            <div className="flex-1 flex flex-col px-4 w-full text-left mt-4 xl:mt-0 pt-4 xl:pt-0 pb-4 xl:pb-0 relative group">
-                <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
-                    Бюджет
-                </label>
-                <div className="relative">
-                    <div className="w-full appearance-none bg-transparent text-gray-500 text-base md:text-lg hover:text-gray-800 transition-colors cursor-pointer pr-6 truncate">
-                        {budget === "ekonomik" ? "Экономный" : budget === "orta" ? "Средний" : "Люкс"}
-                    </div>
-                    <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
-                </div>
-
-                {/* Custom Budget Dropdown Menu */}
-                <div className="absolute z-[60] w-full min-w-[140px] top-full right-0 xl:left-0 mt-4 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                    <div className="flex flex-col gap-1">
-                        {[
-                            { value: "ekonomik", label: "Экономный" },
-                            { value: "orta", label: "Средний" },
-                            { value: "luks", label: "Люкс" }
-                        ].map((opt) => (
-                            <button
-                                key={opt.value}
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setBudget(opt.value);
-                                    (document.activeElement as HTMLElement)?.blur();
-                                }}
-                                className={`py-2 px-3 text-sm font-bold rounded-xl transition-all text-left ${budget === opt.value
-                                    ? "bg-orange-50 text-orange-500"
-                                    : "bg-transparent text-gray-600 hover:bg-gray-50"
-                                    }`}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Create Plan Button */}
-            <div className="px-4 w-full xl:w-auto mt-2 xl:mt-0 border-t xl:border-t-0 border-gray-200 pt-4 xl:pt-0">
-=======
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-between items-center">
->>>>>>> Stashed changes
                 <button
                     type="button"
                     onClick={goToPreviousStep}
@@ -730,7 +494,6 @@ export default function RouteForm() {
                 )}
             </div>
 
-            {/* Loading Modal */}
             <LoadingModal isOpen={normalLoading} currentMessage={currentLoadingMessage} />
         </form>
     );

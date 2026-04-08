@@ -13,9 +13,27 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/subscription", tags=["subscription"])
 
-# Stripe API key'ini .env'den al
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+# Stripe secrets are read lazily to avoid stale values after .env edits.
+
+
+def _get_stripe_secret_key() -> str:
+    key = (os.getenv("STRIPE_SECRET_KEY") or "").strip()
+    if not key or key.endswith("_YOUR_SECRET_KEY_HERE"):
+        raise HTTPException(
+            status_code=500,
+            detail="Stripe is not configured. Set STRIPE_SECRET_KEY in AI-Tripper-backend/.env and restart backend.",
+        )
+    return key
+
+
+def _get_webhook_secret() -> str:
+    secret = (os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip()
+    if not secret or secret.endswith("_YOUR_WEBHOOK_SECRET_HERE"):
+        raise HTTPException(
+            status_code=500,
+            detail="Stripe webhook is not configured. Set STRIPE_WEBHOOK_SECRET in AI-Tripper-backend/.env and restart backend.",
+        )
+    return secret
 
 
 # Pydantic Schemas
@@ -141,6 +159,7 @@ async def create_checkout_session(
         raise HTTPException(status_code=400, detail="Geçersiz plan")
     
     plan_info = PLANS[plan]
+    stripe.api_key = _get_stripe_secret_key()
     
     try:
         # Gerçek Stripe Checkout Session oluştur
@@ -205,10 +224,11 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """Stripe webhook handler"""
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
+    webhook_secret = _get_webhook_secret()
     
     try:
         event = stripe.Webhook.construct_event(
-            payload, sig_header, STRIPE_WEBHOOK_SECRET
+            payload, sig_header, webhook_secret
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail="Invalid payload")

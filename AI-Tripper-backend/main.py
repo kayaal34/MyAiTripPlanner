@@ -61,36 +61,6 @@ class DetailedTripItineraryModel(BaseModel):
     country_flag: str | None = None
     city_image: str | None = None
 
-
-def build_fallback_itinerary(request: TripPlanRequest, reason: str) -> dict[str, Any]:
-    return {
-        "trip_summary": {
-            "destination": request.city,
-            "duration_days": request.days,
-            "travelers": request.travelers,
-            "total_estimated_cost": "N/A",
-            "best_season": "N/A",
-            "weather_forecast": "N/A"
-        },
-        "daily_itinerary": [],
-        "accommodation_suggestions": [],
-        "general_tips": {
-            "local_customs": "N/A",
-            "safety": "N/A",
-            "money": "N/A",
-            "emergency_contacts": {
-                "police": "",
-                "ambulance": "",
-                "fire": "",
-                "tourist_police": ""
-            },
-            "useful_phrases": []
-        },
-        "packing_list": [],
-        "fallback_reason": reason,
-    }
-
-
 async def get_city_image(city: str = "istanbul") -> str:
     """Fetch a single city-level hero image to avoid one API call per activity."""
 
@@ -264,7 +234,10 @@ async def create_detailed_trip_plan(
             itinerary = DetailedTripItineraryModel.model_validate(raw_itinerary).model_dump()
         except ValidationError as validation_error:
             print(f"Invalid AI itinerary payload: {validation_error}")
-            itinerary = build_fallback_itinerary(trip_request, "invalid_ai_payload")
+            raise HTTPException(
+                status_code=502,
+                detail="Gemini returned an invalid itinerary payload. Please try again.",
+            )
 
         itinerary["city_image"] = await get_city_image(trip_request.city)
         
