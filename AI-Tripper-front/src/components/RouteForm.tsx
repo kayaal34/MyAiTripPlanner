@@ -250,7 +250,7 @@ export default function RouteForm() {
             className="bg-white rounded-3xl shadow-2xl p-4 md:p-6 flex flex-col xl:flex-row items-center gap-4 xl:gap-0 divide-y xl:divide-y-0 xl:divide-x divide-gray-200 w-full"
         >
             {/* Destination */}
-            <div className="flex-1 flex flex-col px-4 w-full text-left relative group">
+            <div className="flex-[1.5] xl:flex-[2] flex flex-col px-4 w-full text-left relative group">
                 <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
                     Направление
                 </label>
@@ -276,7 +276,7 @@ export default function RouteForm() {
                                 }
                             }, 200);
                         }}
-                        className="w-full appearance-none bg-transparent text-gray-800 placeholder-gray-400 text-base md:text-lg focus:outline-none pr-6"
+                        className="w-full appearance-none bg-transparent text-gray-800 placeholder-gray-400 text-base md:text-lg focus:outline-none pr-6 text-ellipsis overflow-hidden whitespace-nowrap"
                         required
                     />
                     <i className="fas fa-map-marker-alt absolute right-0 top-1/2 -translate-y-1/2 text-gray-300 text-sm pointer-events-none"></i>
@@ -320,7 +320,7 @@ export default function RouteForm() {
             </div>
 
             {/* Duration */}
-            <div className="flex-[0.8] flex flex-col px-4 w-full text-left mt-4 xl:mt-0 pt-4 xl:pt-0 relative group">
+            <div className="flex-[0.6] flex flex-col px-4 w-full text-left mt-4 xl:mt-0 pt-4 xl:pt-0 relative group">
                 <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
                     Дни
                 </label>

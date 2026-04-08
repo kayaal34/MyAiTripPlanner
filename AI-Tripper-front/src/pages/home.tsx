@@ -197,10 +197,10 @@ export default function Home() {
                             </div>
 
                             <h3 className="text-xl font-bold text-gray-900 mb-4 uppercase tracking-wider">
-                                Добавьте остановки
+                                УКАЖИТЕ ПРЕДПОЧТЕНИЯ
                             </h3>
                             <p className="text-gray-600 text-base leading-relaxed">
-                                Вводите места назначения, рестораны и достопримечательности. Забудьте о запутанных текстовых заметках.
+                                Введите город назначения, бюджет, количество человек и ваши интересы. Система учтет все ваши пожелания.
                             </p>
                         </motion.div>
 
@@ -225,10 +225,10 @@ export default function Home() {
                             </div>
 
                             <h3 className="text-xl font-bold text-gray-900 mb-4 uppercase tracking-wider">
-                                Организуйте по дням
+                                ПОЛУЧИТЕ ГОТОВЫЙ ПЛАН
                             </h3>
                             <p className="text-gray-600 text-base leading-relaxed">
-                                Планируйте ежедневные мероприятия и стройте логичный многодневный маршрут. Все детали по дням в одном месте.
+                                Наша система автоматически сгенерирует для вас идеальный ежедневный маршрут. Никакого ручного планирования.
                             </p>
                         </motion.div>
 
@@ -402,8 +402,7 @@ export default function Home() {
             {/* ❓ SSS */}
             <FAQ />
 
-            {/* 📱 SOSYAL MEDYA */}
-            <SocialTiles />
+
 
             {/* 🔐 AUTH MODAL */}
             {showAuthModal && (
