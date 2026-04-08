@@ -123,7 +123,7 @@ async def get_country_context(city: str) -> tuple[str, str]:
 
 
 async def generate_detailed_trip_itinerary(trip_data: dict):
-    """Generate day-by-day itinerary as strict JSON using Gemini 2.5 Flash."""
+    """Generate a compact day-by-day itinerary as strict JSON using Gemini 2.5 Flash."""
 
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
@@ -165,121 +165,51 @@ You are an expert local travel planner.
 Create a realistic {days}-day travel itinerary for {city}.
 
 Hard requirements:
-1) Return ONLY valid JSON. No markdown, no comments, no extra text.
-2) Keep all user-facing itinerary content in {target_language}.
-3) Keep place and restaurant names real and geographically plausible.
-4) Include realistic addresses and coordinates whenever possible.
-5) Keep descriptions concise and readable.
+1) Return ONLY one valid JSON object.
+2) Do NOT include markdown, code fences, backticks, comments, or explanation text.
+3) Keep all user-facing itinerary content in {target_language}.
+4) Keep place and restaurant names real and geographically plausible.
+5) Include realistic addresses and coordinates whenever possible.
 6) Keep costs and suggestions aligned with a {budget_context} budget.
 7) Consider traveler type: {traveler_context}
 8) Interests: {interests_text}
 9) Preferred transport: {transport}
 10) Start date (if present): {start_date or 'not provided'}
+11) Keep each activity description short: maximum 12 words.
 
 {country_context}
 
-JSON schema to follow exactly:
+JSON schema to follow exactly (only these top-level keys):
 {{
-  "trip_summary": {{
-    "destination": "string",
-    "duration_days": {days},
-    "travelers": "string",
-    "total_estimated_cost": "string",
-    "best_season": "string",
-    "weather_forecast": "string"
-  }},
-  "daily_itinerary": [
-    {{
-      "day": 1,
-      "date": "string",
-      "title": "string",
-      "morning": {{
-        "time": "string",
-        "activities": [
-          {{
-            "name": "string",
-            "type": "string",
-            "address": "string",
-            "coordinates": {{"lat": 0.0, "lng": 0.0}},
-            "duration": "string",
-            "cost": "string",
-            "description": "string",
-            "tips": "string"
-          }}
-        ]
-      }},
-      "lunch": {{
-        "time": "string",
-        "restaurant": {{
-          "name": "string",
-          "address": "string",
-          "coordinates": {{"lat": 0.0, "lng": 0.0}},
-          "cuisine": "string",
-          "average_cost": "string",
-          "recommended_dishes": ["string"],
-          "description": "string"
-        }}
-      }},
-      "afternoon": {{
-        "time": "string",
-        "activities": [
-          {{
-            "name": "string",
-            "type": "string",
-            "address": "string",
-            "coordinates": {{"lat": 0.0, "lng": 0.0}},
-            "duration": "string",
-            "cost": "string",
-            "description": "string"
-          }}
-        ]
-      }},
-      "evening": {{
-        "time": "string",
-        "dinner": {{
-          "name": "string",
-          "address": "string",
-          "coordinates": {{"lat": 0.0, "lng": 0.0}},
-          "cuisine": "string",
-          "average_cost": "string",
-          "description": "string"
-        }},
-        "night_activities": ["string"]
-      }},
-      "daily_tips": {{
-        "weather": "string",
-        "clothing": "string",
-        "important_notes": "string",
-        "estimated_daily_budget": "string"
-      }},
-      "transportation": {{
-        "getting_around": "string",
-        "estimated_transport_cost": "string"
-      }}
-    }}
-  ],
-  "accommodation_suggestions": [
-    {{
-      "name": "string",
-      "type": "string",
-      "location": "string",
-      "price_range": "string",
-      "why_recommended": "string"
-    }}
-  ],
-  "general_tips": {{
-    "local_customs": "string",
-    "safety": "string",
-    "money": "string",
-    "emergency_contacts": {{
-      "police": "string",
-      "ambulance": "string",
-      "fire": "string",
-      "tourist_police": "string"
+    "trip_summary": {{
+        "destination": "string",
+        "duration_days": {days},
+        "travelers": "string",
+        "total_estimated_cost": "string",
+        "best_season": "string",
+        "weather_forecast": "string"
     }},
-    "useful_phrases": ["string"]
-  }},
-  "packing_list": ["string"]
+    "daily_itinerary": [
+        {{
+            "day": 1,
+            "date": "string",
+            "title": "string",
+            "activities": [
+                {{
+                    "time": "string",
+                    "name": "string",
+                    "type": "string",
+                    "address": "string",
+                    "coordinates": {{"lat": 0.0, "lng": 0.0}},
+                    "duration": "string",
+                    "cost": "string",
+                    "description": "string"
+                }}
+            ],
+            "estimated_daily_budget": "string",
+            "transportation_note": "string"
+        }}
+    ]
 }}
 """
 
@@ -294,7 +224,7 @@ JSON schema to follow exactly:
             "temperature": 0.5,
             "topP": 0.95,
             "topK": 40,
-            "maxOutputTokens": 16384,
+            "maxOutputTokens": 8192,
             "response_mime_type": "application/json",
         },
         "safetySettings": [
@@ -367,42 +297,40 @@ async def generate_mock_trip_itinerary(trip_data: dict) -> dict[str, Any]:
                 "day": day,
                 "date": "",
                 "title": f"Day {day} in {city}",
-                "morning": {"time": "09:00-12:00", "activities": []},
-                "lunch": {
-                    "time": "12:00-14:00",
-                    "restaurant": {
-                        "name": "",
-                        "address": "",
+                "activities": [
+                    {
+                        "time": "09:00",
+                        "name": "City Center Walk",
+                        "type": "sightseeing",
+                        "address": city,
                         "coordinates": {"lat": 0.0, "lng": 0.0},
-                        "cuisine": "",
-                        "average_cost": "",
-                        "recommended_dishes": [],
-                        "description": "",
+                        "duration": "2h",
+                        "cost": "N/A",
+                        "description": "Explore central highlights.",
                     },
-                },
-                "afternoon": {"time": "14:00-18:00", "activities": []},
-                "evening": {
-                    "time": "18:00-22:00",
-                    "dinner": {
-                        "name": "",
-                        "address": "",
+                    {
+                        "time": "13:00",
+                        "name": "Local Lunch",
+                        "type": "food",
+                        "address": city,
                         "coordinates": {"lat": 0.0, "lng": 0.0},
-                        "cuisine": "",
-                        "average_cost": "",
-                        "description": "",
+                        "duration": "1h",
+                        "cost": "N/A",
+                        "description": "Try popular local dishes.",
                     },
-                    "night_activities": [],
-                },
-                "daily_tips": {
-                    "weather": "",
-                    "clothing": "",
-                    "important_notes": "",
-                    "estimated_daily_budget": "",
-                },
-                "transportation": {
-                    "getting_around": "",
-                    "estimated_transport_cost": "",
-                },
+                    {
+                        "time": "17:00",
+                        "name": "Evening Landmark Visit",
+                        "type": "attraction",
+                        "address": city,
+                        "coordinates": {"lat": 0.0, "lng": 0.0},
+                        "duration": "2h",
+                        "cost": "N/A",
+                        "description": "Visit a signature spot.",
+                    },
+                ],
+                "estimated_daily_budget": "N/A",
+                "transportation_note": "Use local transit or walking.",
             }
         )
 
@@ -416,18 +344,4 @@ async def generate_mock_trip_itinerary(trip_data: dict) -> dict[str, Any]:
             "weather_forecast": "N/A",
         },
         "daily_itinerary": daily_itinerary,
-        "accommodation_suggestions": [],
-        "general_tips": {
-            "local_customs": "",
-            "safety": "",
-            "money": "",
-            "emergency_contacts": {
-                "police": "",
-                "ambulance": "",
-                "fire": "",
-                "tourist_police": "",
-            },
-            "useful_phrases": [],
-        },
-        "packing_list": [],
     }

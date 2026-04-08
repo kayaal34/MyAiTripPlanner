@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useTripStore } from "../store/useTripStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { saveTripToFavorites } from "../services/api";
+import type { DailyActivity, DailyItinerary } from "../services/api";
+import type { Place } from "../type";
 import Navbar from "../components/Navbar";
-import { MapPin, Calendar, Users, DollarSign, Cloud, Coffee, UtensilsCrossed, Sun, Moon, Info, Hotel, AlertCircle, Phone, MessageSquare, Package, Heart, Save, ChevronDown } from "lucide-react";
+import { MapPin, Calendar, Users, DollarSign, Cloud, Heart, Save } from "lucide-react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -31,11 +33,11 @@ if (!MAPBOX_TOKEN) {
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
 // MapboxGL Map component for TripPlanResult
-function MapboxGLMapComponent({ center, places }: { center: [number, number]; places: any[] }) {
+function MapboxGLMapComponent({ center, places }: { center: [number, number]; places: Place[] }) {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<mapboxgl.Map | null>(null);
     const markersRef = useRef<mapboxgl.Marker[]>([]);
-    const placesRef = useRef(places);
+    const placesRef = useRef<Place[]>(places);
 
     // Keep places ref up to date
     useEffect(() => {
@@ -145,7 +147,7 @@ export default function TripPlanResult() {
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [tripName, setTripName] = useState("");
     const [saveSuccess, setSaveSuccess] = useState(false);
-    const [isMapOpen, setIsMapOpen] = useState(false);
+    const [activeDay, setActiveDay] = useState<number>(1);
 
     // Eğer plan yoksa ana sayfaya yönlendir
     useEffect(() => {
@@ -153,6 +155,14 @@ export default function TripPlanResult() {
             navigate("/");
         }
     }, [currentTripPlan, navigate]);
+
+    useEffect(() => {
+        if (!currentTripPlan?.daily_itinerary?.length) return;
+        const firstDay = currentTripPlan.daily_itinerary[0]?.day;
+        if (typeof firstDay === "number") {
+            setActiveDay(firstDay);
+        }
+    }, [currentTripPlan]);
 
     // Favorilere kaydetme fonksiyonu
     const handleSaveTrip = async () => {
@@ -198,105 +208,79 @@ export default function TripPlanResult() {
                 setSaveSuccess(false);
                 setTripName("");
             }, 2000);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Save trip error:", error);
-            alert(error.message || "Kaydetme sırasında hata oluştu");
+            if (error instanceof Error) {
+                alert(error.message || "Kaydetme sırasında hata oluştu");
+            } else {
+                alert("Kaydetme sırasında hata oluştu");
+            }
         } finally {
             setIsSaving(false);
         }
     };
 
-    // Tüm aktiviteleri haritada göstermek için topla
+    // Yeni şema: günlük düz activities dizisinden harita pinlerini topla
     const allPlaces = useMemo(() => {
         if (!currentTripPlan) return [];
 
-        const places: any[] = [];
+        const places: Place[] = [];
         let placeId = 0;
 
-        currentTripPlan.daily_itinerary.forEach((day) => {
-            // Morning activities
-            day.morning?.activities?.forEach((activity: any) => {
-                if (activity.coordinates?.lat && activity.coordinates?.lng) {
-                    places.push({
-                        id: `place-${placeId++}`,
-                        name: activity.name,
-                        lat: parseFloat(String(activity.coordinates.lat)),
-                        lng: parseFloat(String(activity.coordinates.lng)),
-                        address: activity.address || '',
-                        description: activity.description || '',
-                        day: day.day,
-                        timeSlot: `Sabah - ${day.morning.time}`,
-                        image: activity.image || 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&h=600&fit=crop'
-                    });
-                }
-            });
+        currentTripPlan.daily_itinerary.forEach((day: DailyItinerary) => {
+            day.activities.forEach((activity: DailyActivity) => {
+                const lat = Number(activity?.coordinates?.lat);
+                const lng = Number(activity?.coordinates?.lng);
 
-            // Lunch restaurant
-            if (day.lunch?.restaurant?.coordinates?.lat && day.lunch?.restaurant?.coordinates?.lng) {
+                if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
+                    return;
+                }
+
                 places.push({
                     id: `place-${placeId++}`,
-                    name: day.lunch.restaurant.name,
-                    lat: parseFloat(String(day.lunch.restaurant.coordinates.lat)),
-                    lng: parseFloat(String(day.lunch.restaurant.coordinates.lng)),
-                    address: day.lunch.restaurant.address || '',
-                    description: day.lunch.restaurant.description || day.lunch.restaurant.cuisine || '',
+                    name: activity.name || "Activity",
+                    lat,
+                    lng,
+                    address: activity.address || "",
+                    description: activity.description || "",
                     day: day.day,
-                    timeSlot: `Öğle Yemeği - ${day.lunch.time}`,
-                    image: (day.lunch.restaurant as any)?.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop'
+                    timeSlot: activity.time || "",
                 });
-            }
-
-            // Afternoon activities
-            day.afternoon?.activities?.forEach((activity: any) => {
-                if (activity.coordinates?.lat && activity.coordinates?.lng) {
-                    places.push({
-                        id: `place-${placeId++}`,
-                        name: activity.name,
-                        lat: parseFloat(String(activity.coordinates.lat)),
-                        lng: parseFloat(String(activity.coordinates.lng)),
-                        address: activity.address || '',
-                        description: activity.description || '',
-                        day: day.day,
-                        timeSlot: `Öğleden Sonra - ${day.afternoon.time}`,
-                        image: activity.image || 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800&h=600&fit=crop'
-                    });
-                }
             });
-
-            // Evening dinner
-            if (day.evening?.dinner?.coordinates?.lat && day.evening?.dinner?.coordinates?.lng) {
-                places.push({
-                    id: `place-${placeId++}`,
-                    name: day.evening.dinner.name,
-                    lat: parseFloat(String(day.evening.dinner.coordinates.lat)),
-                    lng: parseFloat(String(day.evening.dinner.coordinates.lng)),
-                    address: day.evening.dinner.address || '',
-                    description: day.evening.dinner.description || day.evening.dinner.cuisine || '',
-                    day: day.day,
-                    timeSlot: `Akşam Yemeği - ${day.evening.time}`,
-                    image: (day.evening.dinner as any)?.image || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&h=600&fit=crop'
-                });
-            }
         });
 
         return places;
     }, [currentTripPlan]);
 
+    const selectedDay = useMemo<DailyItinerary | null>(() => {
+        if (!currentTripPlan?.daily_itinerary?.length) return null;
+        return (
+            currentTripPlan.daily_itinerary.find((d) => d.day === activeDay) ||
+            currentTripPlan.daily_itinerary[0]
+        );
+    }, [currentTripPlan, activeDay]);
+
+    const selectedDayPlaces = useMemo<Place[]>(() => {
+        if (!selectedDay) return [];
+        return allPlaces.filter((p) => p.day === selectedDay.day);
+    }, [allPlaces, selectedDay]);
+
     // Harita merkezi (tüm yerlerin ortalaması)
     const mapCenter = useMemo<[number, number]>(() => {
-        if (allPlaces.length === 0) return [28.9784, 41.0082]; // İstanbul default [lng, lat]
+        const sourcePlaces = selectedDayPlaces.length > 0 ? selectedDayPlaces : allPlaces;
+        if (sourcePlaces.length === 0) return [28.9784, 41.0082]; // İstanbul default [lng, lat]
 
-        const avgLat = allPlaces.reduce((sum, p) => sum + p.lat, 0) / allPlaces.length;
-        const avgLng = allPlaces.reduce((sum, p) => sum + p.lng, 0) / allPlaces.length;
+        const avgLat = sourcePlaces.reduce((sum, p) => sum + p.lat, 0) / sourcePlaces.length;
+        const avgLng = sourcePlaces.reduce((sum, p) => sum + p.lng, 0) / sourcePlaces.length;
 
         return [avgLng, avgLat]; // Correct: [lng, lat]
-    }, [allPlaces]);
+    }, [allPlaces, selectedDayPlaces]);
 
     if (!currentTripPlan) {
         return null;
     }
 
-    const { trip_summary, daily_itinerary, accommodation_suggestions, general_tips, packing_list } = currentTripPlan;
+    const { trip_summary, daily_itinerary } = currentTripPlan;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
@@ -397,252 +381,95 @@ export default function TripPlanResult() {
                     </div>
                 </div>
 
-                {/* HARITA - Tüm Aktiviteler */}
-                {allPlaces.length > 0 && (
-                    <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
-                        <button
-                            onClick={() => setIsMapOpen(!isMapOpen)}
-                            className="w-full flex items-center justify-between text-left hover:bg-gray-50 -m-6 p-6 rounded-2xl transition-colors"
-                        >
-                            <h2 className="text-3xl font-bold text-gray-800">🗺️ Маршрут на карте</h2>
-                            <ChevronDown
-                                className={`w-8 h-8 text-gray-600 transition-transform duration-300 ${isMapOpen ? 'rotate-180' : ''
+                {/* Day Tabs + Selected Day Content */}
+                <div className="mb-8">
+                    <div className="mb-4 overflow-x-auto">
+                        <div className="inline-flex min-w-full gap-2 rounded-2xl bg-white/80 p-2 shadow-lg backdrop-blur">
+                            {daily_itinerary.map((day: DailyItinerary) => (
+                                <button
+                                    key={day.day}
+                                    onClick={() => setActiveDay(day.day)}
+                                    className={`whitespace-nowrap rounded-xl px-5 py-3 text-sm font-semibold transition-all ${
+                                        selectedDay?.day === day.day
+                                            ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md"
+                                            : "bg-white text-gray-700 hover:bg-blue-50"
                                     }`}
-                            />
-                        </button>
-
-                        {isMapOpen && (
-                            <MapboxGLMapComponent
-                                center={mapCenter}
-                                places={allPlaces}
-                            />
-                        )}
+                                >
+                                    Day {day.day}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                )}
 
-                {/* Daily Itinerary */}
-                <div className="space-y-6 mb-8">
-                    <h2 className="text-3xl font-bold text-gray-800 mb-4">📅 Ежедневный маршрут</h2>
-
-                    {daily_itinerary.map((day) => (
-                        <div key={day.day} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                            {/* Day Header */}
-                            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6">
-                                <h3 className="text-2xl font-bold">День {day.day} - {day.title}</h3>
-                                <p className="text-blue-100">{day.date}</p>
-                            </div>
-
-                            <div className="p-6 space-y-6">
-                                {/* Morning */}
-                                <div className="border-l-4 border-yellow-400 pl-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Coffee className="w-6 h-6 text-yellow-600" />
-                                        <h4 className="text-xl font-semibold text-gray-800">Утро ({day.morning.time})</h4>
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+                        <div className="space-y-4 lg:col-span-3">
+                            {selectedDay ? (
+                                <div className="overflow-hidden rounded-2xl bg-white shadow-lg">
+                                    <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+                                        <h3 className="text-2xl font-bold">Day {selectedDay.day} - {selectedDay.title}</h3>
+                                        <p className="text-blue-100">{selectedDay.date}</p>
                                     </div>
-                                    <div className="space-y-3">
-                                        {day.morning.activities.map((activity, idx) => (
-                                            <div key={idx} className="bg-yellow-50 rounded-lg p-4">
-                                                <h5 className="font-bold text-gray-800">{activity.name}</h5>
-                                                <p className="text-sm text-gray-600">{activity.type} • {activity.duration} • {activity.cost}</p>
-                                                <p className="text-gray-700 mt-2">{activity.description}</p>
-                                                <p className="text-sm text-gray-500 mt-1">📍 {activity.address}</p>
-                                                {activity.tips && (
-                                                    <p className="text-sm text-blue-600 mt-2">💡 {activity.tips}</p>
-                                                )}
+
+                                    <div className="p-6">
+                                        <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2">
+                                            <div className="rounded-xl bg-blue-50 p-4">
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Estimated Daily Budget</p>
+                                                <p className="mt-1 text-lg font-bold text-blue-900">{selectedDay.estimated_daily_budget || "N/A"}</p>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Lunch */}
-                                <div className="border-l-4 border-orange-400 pl-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <UtensilsCrossed className="w-6 h-6 text-orange-600" />
-                                        <h4 className="text-xl font-semibold text-gray-800">Обед ({day.lunch.time})</h4>
-                                    </div>
-                                    <div className="bg-orange-50 rounded-lg p-4">
-                                        <h5 className="font-bold text-gray-800">{day.lunch.restaurant.name}</h5>
-                                        <p className="text-sm text-gray-600">{day.lunch.restaurant.cuisine} • {day.lunch.restaurant.average_cost}</p>
-                                        {day.lunch.restaurant.description && (
-                                            <p className="text-gray-700 mt-2">{day.lunch.restaurant.description}</p>
-                                        )}
-                                        {day.lunch.restaurant.recommended_dishes && (
-                                            <p className="text-sm text-green-600 mt-2">
-                                                🍽️ Рекомендуемые блюда: {day.lunch.restaurant.recommended_dishes.join(", ")}
-                                            </p>
-                                        )}
-                                        <p className="text-sm text-gray-500 mt-1">📍 {day.lunch.restaurant.address}</p>
-                                    </div>
-                                </div>
-
-                                {/* Afternoon */}
-                                <div className="border-l-4 border-blue-400 pl-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Sun className="w-6 h-6 text-blue-600" />
-                                        <h4 className="text-xl font-semibold text-gray-800">День ({day.afternoon.time})</h4>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {day.afternoon.activities.map((activity, idx) => (
-                                            <div key={idx} className="bg-blue-50 rounded-lg p-4">
-                                                <h5 className="font-bold text-gray-800">{activity.name}</h5>
-                                                <p className="text-sm text-gray-600">{activity.type} • {activity.duration} • {activity.cost}</p>
-                                                <p className="text-gray-700 mt-2">{activity.description}</p>
-                                                <p className="text-sm text-gray-500 mt-1">📍 {activity.address}</p>
-                                                {activity.tips && (
-                                                    <p className="text-sm text-blue-600 mt-2">💡 {activity.tips}</p>
-                                                )}
+                                            <div className="rounded-xl bg-indigo-50 p-4">
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Transportation</p>
+                                                <p className="mt-1 text-sm font-medium text-indigo-900">{selectedDay.transportation_note || "N/A"}</p>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Evening */}
-                                <div className="border-l-4 border-purple-400 pl-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Moon className="w-6 h-6 text-purple-600" />
-                                        <h4 className="text-xl font-semibold text-gray-800">Вечер ({day.evening.time})</h4>
-                                    </div>
-                                    <div className="bg-purple-50 rounded-lg p-4 mb-3">
-                                        <h5 className="font-bold text-gray-800">{day.evening.dinner.name}</h5>
-                                        <p className="text-sm text-gray-600">{day.evening.dinner.cuisine} • {day.evening.dinner.average_cost}</p>
-                                        {day.evening.dinner.atmosphere && (
-                                            <p className="text-gray-700 mt-2">🌟 {day.evening.dinner.atmosphere}</p>
-                                        )}
-                                        {day.evening.dinner.recommended_dishes && (
-                                            <p className="text-sm text-green-600 mt-2">
-                                                🍽️ Рекомендуемые блюда: {day.evening.dinner.recommended_dishes.join(", ")}
-                                            </p>
-                                        )}
-                                        <p className="text-sm text-gray-500 mt-1">📍 {day.evening.dinner.address}</p>
-                                    </div>
-                                    {day.evening.night_activities.length > 0 && (
-                                        <div className="bg-purple-50 rounded-lg p-4">
-                                            <p className="font-semibold text-gray-800 mb-2">Ночные развлечения:</p>
-                                            <ul className="list-disc list-inside space-y-1">
-                                                {day.evening.night_activities.map((activity, idx) => (
-                                                    <li key={idx} className="text-gray-700">{activity}</li>
-                                                ))}
-                                            </ul>
                                         </div>
-                                    )}
-                                </div>
 
-                                {/* Daily Tips */}
-                                <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-4">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <Info className="w-5 h-5 text-green-600" />
-                                        <h4 className="font-semibold text-gray-800">Советы на день</h4>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                        <div>
-                                            <p className="text-gray-600"><span className="font-semibold">Погода:</span> {day.daily_tips.weather}</p>
-                                            <p className="text-gray-600 mt-1"><span className="font-semibold">Одежда:</span> {day.daily_tips.clothing}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-gray-600"><span className="font-semibold">Бюджет на день:</span> {day.daily_tips.estimated_daily_budget}</p>
-                                            <p className="text-gray-600 mt-1"><span className="font-semibold">Транспорт:</span> {day.transportation.getting_around}</p>
+                                        <div className="space-y-4">
+                                            {selectedDay.activities.map((activity: DailyActivity, idx: number) => (
+                                                <div key={idx} className="relative rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                                                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                                                        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                                                            {activity.time || "--:--"}
+                                                        </span>
+                                                        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                                                            {activity.type || "activity"}
+                                                        </span>
+                                                        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                                                            {activity.duration || "N/A"}
+                                                        </span>
+                                                        <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+                                                            {activity.cost || "N/A"}
+                                                        </span>
+                                                    </div>
+                                                    <h4 className="text-lg font-bold text-gray-800">{activity.name || "Activity"}</h4>
+                                                    {activity.description && (
+                                                        <p className="mt-2 text-gray-700">{activity.description}</p>
+                                                    )}
+                                                    {activity.address && (
+                                                        <p className="mt-2 text-sm text-gray-500">📍 {activity.address}</p>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
-                                    {day.daily_tips.important_notes && (
-                                        <p className="text-orange-600 mt-3">⚠️ {day.daily_tips.important_notes}</p>
-                                    )}
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="rounded-2xl bg-white p-6 text-gray-600 shadow-lg">No day data available.</div>
+                            )}
                         </div>
-                    ))}
-                </div>
 
-                {/* Accommodation Suggestions */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                    <div className="flex items-center gap-3 mb-6">
-                        <Hotel className="w-8 h-8 text-blue-600" />
-                        <h2 className="text-3xl font-bold text-gray-800">🏨 Рекомендации по размещению</h2>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {accommodation_suggestions.map((acc, idx) => (
-                            <div key={idx} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                <h3 className="font-bold text-lg text-gray-800">{acc.name}</h3>
-                                <p className="text-sm text-gray-500">{acc.type} • {acc.location}</p>
-                                <p className="text-green-600 font-semibold mt-2">{acc.price_range}</p>
-                                <p className="text-gray-700 mt-2">{acc.why_recommended}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* General Tips */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                    <div className="flex items-center gap-3 mb-6">
-                        <AlertCircle className="w-8 h-8 text-orange-600" />
-                        <h2 className="text-3xl font-bold text-gray-800">💡 Общие советы</h2>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h3 className="font-semibold text-gray-800 mb-2">Местные обычаи</h3>
-                            <p className="text-gray-700">{general_tips.local_customs}</p>
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-gray-800 mb-2">Безопасность</h3>
-                            <p className="text-gray-700">{general_tips.safety}</p>
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-gray-800 mb-2">Деньги</h3>
-                            <p className="text-gray-700">{general_tips.money}</p>
-                        </div>
-                        <div className="flex items-start gap-2">
-                            <Phone className="w-5 h-5 text-red-500 flex-shrink-0 mt-1" />
-                            <div>
-                                <h3 className="font-semibold text-gray-800 mb-2">Экстренные контакты</h3>
-                                {typeof general_tips.emergency_contacts === 'string' ? (
-                                    <p className="text-gray-700">{general_tips.emergency_contacts}</p>
-                                ) : (
-                                    <div className="text-sm text-gray-700 space-y-1">
-                                        {(general_tips.emergency_contacts as any)?.police && (
-                                            <p>🚓 Полиция: <span className="font-semibold">{(general_tips.emergency_contacts as any).police}</span></p>
-                                        )}
-                                        {(general_tips.emergency_contacts as any)?.ambulance && (
-                                            <p>🚑 Скорая помощь: <span className="font-semibold">{(general_tips.emergency_contacts as any).ambulance}</span></p>
-                                        )}
-                                        {(general_tips.emergency_contacts as any)?.fire && (
-                                            <p>🚒 Пожарная: <span className="font-semibold">{(general_tips.emergency_contacts as any).fire}</span></p>
-                                        )}
-                                        {(general_tips.emergency_contacts as any)?.tourist_police && (
-                                            <p>👮 Туристическая полиция: <span className="font-semibold">{(general_tips.emergency_contacts as any).tourist_police}</span></p>
-                                        )}
-                                    </div>
-                                )}
+                        <div className="lg:col-span-2">
+                            <div className="sticky top-24 rounded-2xl bg-white p-4 shadow-xl">
+                                <h2 className="mb-2 text-xl font-bold text-gray-800">🗺️ Map</h2>
+                                <p className="mb-3 text-sm text-gray-500">
+                                    {selectedDay
+                                        ? `Pins for Day ${selectedDay.day}`
+                                        : "Pins for all activities"}
+                                </p>
+                                <MapboxGLMapComponent
+                                    center={mapCenter}
+                                    places={selectedDayPlaces.length > 0 ? selectedDayPlaces : allPlaces}
+                                />
                             </div>
                         </div>
-                    </div>
-
-                    {general_tips.useful_phrases.length > 0 && (
-                        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                            <div className="flex items-center gap-2 mb-3">
-                                <MessageSquare className="w-6 h-6 text-blue-600" />
-                                <h3 className="font-semibold text-gray-800">Полезные фразы</h3>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {general_tips.useful_phrases.map((phrase, idx) => (
-                                    <p key={idx} className="text-sm text-gray-700">• {phrase}</p>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Packing List */}
-                <div className="bg-white rounded-2xl shadow-lg p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <Package className="w-8 h-8 text-purple-600" />
-                        <h2 className="text-3xl font-bold text-gray-800">🎒 Что взять с собой</h2>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {packing_list.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
-                                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                                <p className="text-gray-700">{item}</p>
-                            </div>
-                        ))}
                     </div>
                 </div>
 

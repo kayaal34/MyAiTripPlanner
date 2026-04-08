@@ -7,11 +7,13 @@ import redis.asyncio as redis
 from dotenv import load_dotenv
 load_dotenv()
 
-# Database URL - asyncpg sürücüsü ile
+# Database URL - postgresql:// ise asyncpg'ye çevir
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/aitripper"
+    "postgresql://postgres:postgres@localhost:5432/aitripper"
 )
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 # Create async engine
 engine = create_async_engine(
@@ -41,7 +43,7 @@ async def init_redis():
     global redis_client
     try:
         REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-        redis_client = await redis.from_url(REDIS_URL, decode_responses=True)
+        redis_client = redis.from_url(REDIS_URL, decode_responses=True)
         await redis_client.ping()
         print("✅ Redis connected successfully")
     except Exception as e:
@@ -61,7 +63,6 @@ async def get_db():
     async with AsyncSessionLocal() as session:
         try:
             yield session
-            await session.commit()
         except Exception:
             await session.rollback()
             raise

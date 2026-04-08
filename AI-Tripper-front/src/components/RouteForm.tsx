@@ -33,6 +33,8 @@ export default function RouteForm() {
     const [interests, setInterests] = useState<string[]>([]);
     const [budget, setBudget] = useState("orta");
     const [normalLoading, setNormalLoading] = useState(false);
+    const [currentLoadingMessage, setCurrentLoadingMessage] = useState("Plan hazırlanıyor...");
+    const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
     // City autocomplete states
     const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
@@ -153,6 +155,26 @@ export default function RouteForm() {
         );
     };
 
+    const goToNextStep = () => {
+        if (currentStep === 1) {
+            if (!city.trim() || !isCitySelected) {
+                setShowCityWarning(true);
+                return;
+            }
+            setShowCityWarning(false);
+        }
+
+        if (currentStep < 3) {
+            setCurrentStep((prev) => (prev + 1) as 2 | 3);
+        }
+    };
+
+    const goToPreviousStep = () => {
+        if (currentStep > 1) {
+            setCurrentStep((prev) => (prev - 1) as 1 | 2);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -179,9 +201,11 @@ export default function RouteForm() {
         ];
 
         let messageIndex = 0;
+        setCurrentLoadingMessage(messages[0]);
 
         const messageInterval = setInterval(() => {
             messageIndex = (messageIndex + 1) % messages.length;
+            setCurrentLoadingMessage(messages[messageIndex]);
         }, 2000);
 
         try {
@@ -212,6 +236,7 @@ export default function RouteForm() {
 
             clearInterval(messageInterval);
             setNormalLoading(false);
+            setCurrentLoadingMessage("Plan hazırlanıyor...");
 
             console.log("✅ Plan oluşturuldu:", response.itinerary);
 
@@ -239,6 +264,7 @@ export default function RouteForm() {
         } catch (error: any) {
             clearInterval(messageInterval);
             setNormalLoading(false);
+            setCurrentLoadingMessage("Plan hazırlanıyor...");
             console.error("❌ Plan oluşturma hatası:", error);
             alert(`Hata: ${error.message || "Plan oluşturulamadı. Lütfen tekrar deneyin."}`);
         }
@@ -246,9 +272,16 @@ export default function RouteForm() {
 
     return (
         <form
-            onSubmit={handleSubmit}
-            className="bg-white rounded-3xl shadow-2xl p-4 md:p-6 flex flex-col xl:flex-row items-center gap-4 xl:gap-0 divide-y xl:divide-y-0 xl:divide-x divide-gray-200 w-full"
+            onSubmit={(e) => {
+                if (currentStep !== 3) {
+                    e.preventDefault();
+                    return;
+                }
+                handleSubmit(e);
+            }}
+            className="bg-white rounded-3xl shadow-2xl p-4 md:p-8 w-full"
         >
+<<<<<<< Updated upstream
             {/* Destination */}
             <div className="flex-[1.5] xl:flex-[2] flex flex-col px-4 w-full text-left relative group">
                 <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
@@ -278,47 +311,235 @@ export default function RouteForm() {
                         }}
                         className="w-full appearance-none bg-transparent text-gray-800 placeholder-gray-400 text-base md:text-lg focus:outline-none pr-6 text-ellipsis overflow-hidden whitespace-nowrap"
                         required
-                    />
-                    <i className="fas fa-map-marker-alt absolute right-0 top-1/2 -translate-y-1/2 text-gray-300 text-sm pointer-events-none"></i>
+=======
+            <div className="mb-8">
+                <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-gray-600">Step {currentStep} of 3</p>
+                    <p className="text-xs text-gray-500">{Math.round((currentStep / 3) * 100)}%</p>
                 </div>
+                <div className="h-2 w-full bg-orange-100 rounded-full overflow-hidden">
+                    <div
+                        className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-500 ease-out"
+                        style={{ width: `${(currentStep / 3) * 100}%` }}
+>>>>>>> Stashed changes
+                    />
+                </div>
+            </div>
 
-                {/* City Suggestions Dropdown */}
-                {showSuggestions && citySuggestions.length > 0 && (
-                    <div className="absolute z-50 w-[120%] top-full mt-4 -left-4 bg-white border border-gray-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto">
-                        {citySuggestions.map((suggestion, index) => (
-                            <button
-                                key={index}
-                                type="button"
-                                onClick={() => {
-                                    setCity(suggestion);
-                                    setIsCitySelected(true);
-                                    setShowSuggestions(false);
+            <div className="min-h-[260px] transition-all duration-300 ease-in-out">
+                {currentStep === 1 && (
+                    <div className="max-w-2xl mx-auto text-center animate-[fadeIn_.25s_ease]">
+                        <label className="block text-orange-500 font-bold tracking-wide text-base md:text-lg mb-4">
+                            Направление
+                        </label>
+                        <div className="relative group text-left">
+                            <input
+                                type="text"
+                                placeholder="Где отдохнем?"
+                                value={city}
+                                onChange={(e) => {
+                                    setCity(e.target.value);
+                                    setIsCitySelected(false);
+                                    setShowCityWarning(false);
                                 }}
-                                className="w-full text-left px-5 py-3 hover:bg-orange-50 transition-colors border-b border-gray-50 last:border-b-0"
-                            >
-                                <div className="font-semibold text-gray-800 text-sm">{suggestion}</div>
-                            </button>
-                        ))}
+                                onFocus={() => {
+                                    if (citySuggestions.length > 0) setShowSuggestions(true);
+                                    setShowCityWarning(false);
+                                }}
+                                onBlur={() => {
+                                    setTimeout(() => {
+                                        setShowSuggestions(false);
+                                        if (city.trim().length > 0 && !isCitySelected) {
+                                            setShowCityWarning(true);
+                                        }
+                                    }, 200);
+                                }}
+                                className="w-full bg-white border-2 border-orange-200 rounded-2xl px-5 py-4 text-lg md:text-2xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-500 pr-12"
+                                required
+                            />
+                            <i className="fas fa-map-marker-alt absolute right-5 top-1/2 -translate-y-1/2 text-orange-400 text-lg pointer-events-none"></i>
+
+                            {showSuggestions && citySuggestions.length > 0 && (
+                                <div className="absolute z-50 w-full top-full mt-3 bg-white border border-gray-100 rounded-2xl shadow-2xl max-h-60 overflow-y-auto text-left">
+                                    {citySuggestions.map((suggestion, index) => (
+                                        <button
+                                            key={index}
+                                            type="button"
+                                            onClick={() => {
+                                                setCity(suggestion);
+                                                setIsCitySelected(true);
+                                                setShowSuggestions(false);
+                                            }}
+                                            className="w-full text-left px-5 py-3 hover:bg-orange-50 transition-colors border-b border-gray-50 last:border-b-0"
+                                        >
+                                            <div className="font-semibold text-gray-800 text-sm">{suggestion}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {isLoadingSuggestions && (
+                                <div className="absolute right-12 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                                    <i className="fas fa-spinner fa-spin"></i>
+                                </div>
+                            )}
+
+                            {showCityWarning && !isCitySelected && city.trim().length > 0 && (
+                                <div className="absolute z-40 w-full top-full mt-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-lg">
+                                    <p className="text-xs text-red-700">
+                                        <span className="font-bold">⚠️ Пожалуйста, выберите город из списка</span>
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
-                {/* Loading indicator */}
-                {isLoadingSuggestions && (
-                    <div className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
-                        <i className="fas fa-spinner fa-spin"></i>
+                {currentStep === 2 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-[fadeIn_.25s_ease]">
+                        <div className="relative group rounded-2xl border border-gray-200 p-5">
+                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">
+                                Дни
+                            </label>
+                            <div className="relative">
+                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6">
+                                    {days}
+                                </div>
+                                <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+                            </div>
+                            <div className="absolute z-50 w-full left-0 top-full mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                    {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+                                        <button
+                                            key={d}
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setDays(d.toString());
+                                                (document.activeElement as HTMLElement)?.blur();
+                                            }}
+                                            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all text-center ${days === d.toString()
+                                                ? "bg-orange-500 text-white"
+                                                : "bg-gray-50 text-gray-600 hover:bg-orange-50"
+                                                }`}
+                                        >
+                                            {d}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative group rounded-2xl border border-gray-200 p-5">
+                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">
+                                Кто едет?
+                            </label>
+                            <div className="relative">
+                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6 truncate">
+                                    {travelers || "Выберите..."}
+                                </div>
+                                <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+                            </div>
+                            <div className="absolute z-50 w-full left-0 top-full mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                                <div className="grid grid-cols-2 gap-2">
+                                    {["Один", "С друзьями", "С семьей", "Пара"].map((opt) => (
+                                        <button
+                                            key={opt}
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setTravelers(opt);
+                                                (document.activeElement as HTMLElement)?.blur();
+                                            }}
+                                            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all text-center ${travelers === opt
+                                                ? "bg-orange-500 text-white"
+                                                : "bg-gray-50 text-gray-600 hover:bg-orange-50"
+                                                }`}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
-                {/* City Selection Warning */}
-                {showCityWarning && !isCitySelected && city.trim().length > 0 && (
-                    <div className="absolute z-40 w-[120%] top-full mt-4 -left-4 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-lg">
-                        <p className="text-xs text-red-700">
-                            <span className="font-bold">⚠️ Пожалуйста, выберите город из списка</span>
-                        </p>
+                {currentStep === 3 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-[fadeIn_.25s_ease]">
+                        <div className="relative group rounded-2xl border border-gray-200 p-5">
+                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">
+                                Интересы
+                            </label>
+                            <div className="relative">
+                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6 truncate">
+                                    {interests.length > 0 ? `${interests.length} Выбрано` : "Выбрать..."}
+                                </div>
+                                <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+                            </div>
+                            <div className="absolute z-50 w-full top-full left-0 mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                                <div className="grid grid-cols-2 gap-2">
+                                    {interestOptions.map((interest) => (
+                                        <button
+                                            key={interest}
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                toggleInterest(interest);
+                                            }}
+                                            className={`py-2 px-2 text-xs font-bold rounded-lg transition-all ${interests.includes(interest)
+                                                ? "bg-orange-500 text-white"
+                                                : "bg-gray-50 text-gray-600 hover:bg-orange-50"
+                                                }`}
+                                        >
+                                            {interest}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative group rounded-2xl border border-gray-200 p-5">
+                            <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-2 block">
+                                Бюджет
+                            </label>
+                            <div className="relative">
+                                <div className="w-full appearance-none bg-transparent text-gray-700 text-lg hover:text-gray-900 transition-colors cursor-pointer pr-6 truncate">
+                                    {budget === "ekonomik" ? "Экономный" : budget === "orta" ? "Средний" : "Люкс"}
+                                </div>
+                                <i className="fas fa-chevron-down absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+                            </div>
+                            <div className="absolute z-[60] w-full left-0 top-full mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                                <div className="flex flex-col gap-1">
+                                    {[
+                                        { value: "ekonomik", label: "Экономный" },
+                                        { value: "orta", label: "Средний" },
+                                        { value: "luks", label: "Люкс" }
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setBudget(opt.value);
+                                                (document.activeElement as HTMLElement)?.blur();
+                                            }}
+                                            className={`py-2 px-3 text-sm font-bold rounded-xl transition-all text-left ${budget === opt.value
+                                                ? "bg-orange-50 text-orange-500"
+                                                : "bg-transparent text-gray-600 hover:bg-gray-50"
+                                                }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
 
+<<<<<<< Updated upstream
             {/* Duration */}
             <div className="flex-[0.6] flex flex-col px-4 w-full text-left mt-4 xl:mt-0 pt-4 xl:pt-0 relative group">
                 <label className="text-orange-500 font-bold tracking-wide text-sm md:text-base mb-1 whitespace-nowrap">
@@ -469,23 +690,48 @@ export default function RouteForm() {
 
             {/* Create Plan Button */}
             <div className="px-4 w-full xl:w-auto mt-2 xl:mt-0 border-t xl:border-t-0 border-gray-200 pt-4 xl:pt-0">
+=======
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-between items-center">
+>>>>>>> Stashed changes
                 <button
-                    type="submit"
-                    disabled={normalLoading || !token}
-                    className="w-full xl:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 md:py-4 px-6 md:px-8 rounded-2xl transition-all shadow-lg shadow-orange-500/30 text-base md:text-lg flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    type="button"
+                    onClick={goToPreviousStep}
+                    disabled={currentStep === 1 || normalLoading}
+                    className="w-full sm:w-auto px-6 py-3 rounded-2xl font-bold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                    <i className={normalLoading ? "fas fa-spinner fa-spin" : "fas fa-magic"}></i>
-                    {normalLoading ? "Загрузка..." : "Создать план"}
+                    Назад
                 </button>
-                {!token && (
-                    <p className="text-center text-[10px] text-red-500 mt-2 xl:absolute xl:-bottom-6 xl:right-6 whitespace-nowrap">
-                        ⚠️ Требуется вход
-                    </p>
+
+                {currentStep < 3 ? (
+                    <button
+                        type="button"
+                        onClick={goToNextStep}
+                        disabled={normalLoading}
+                        className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-2xl transition-all shadow-lg shadow-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Далее
+                    </button>
+                ) : (
+                    <div className="w-full sm:w-auto text-right">
+                        <button
+                            type="submit"
+                            disabled={normalLoading || !token}
+                            className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 md:py-4 px-6 md:px-8 rounded-2xl transition-all shadow-lg shadow-orange-500/30 text-base md:text-lg flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                            <i className={normalLoading ? "fas fa-spinner fa-spin" : "fas fa-magic"}></i>
+                            {normalLoading ? "Загрузка..." : "Создать план"}
+                        </button>
+                        {!token && (
+                            <p className="text-center sm:text-right text-[10px] text-red-500 mt-2 whitespace-nowrap">
+                                ⚠️ Требуется вход
+                            </p>
+                        )}
+                    </div>
                 )}
             </div>
 
             {/* Loading Modal */}
-            <LoadingModal isOpen={normalLoading} />
+            <LoadingModal isOpen={normalLoading} currentMessage={currentLoadingMessage} />
         </form>
     );
 }

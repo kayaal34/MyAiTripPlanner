@@ -3,10 +3,7 @@ import { useTripStore } from "../store/useTripStore";
 export default function PlaceList() {
   const currentTripPlan = useTripStore((state) => state.currentTripPlan);
 
-  const places = (currentTripPlan?.daily_itinerary ?? []).flatMap((day) => [
-    ...(day.morning?.activities ?? []),
-    ...(day.afternoon?.activities ?? []),
-  ]);
+  const places = (currentTripPlan?.daily_itinerary ?? []).flatMap((day) => day.activities ?? []);
 
   if (!places.length)
     return (

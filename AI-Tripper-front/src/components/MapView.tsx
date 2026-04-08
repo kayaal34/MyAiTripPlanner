@@ -44,10 +44,7 @@ function extractItineraryPlaces(plan: ReturnType<typeof useTripStore.getState>["
             });
         };
 
-        day.morning?.activities?.forEach((activity) => pushWithCoords(activity));
-        pushWithCoords(day.lunch?.restaurant);
-        day.afternoon?.activities?.forEach((activity) => pushWithCoords(activity));
-        pushWithCoords(day.evening?.dinner);
+        day.activities.forEach((activity) => pushWithCoords(activity));
     }
 
     return places;
@@ -70,7 +67,7 @@ export default function MapView() {
     };
 
     const markersRef = useRef<mapboxgl.Marker[]>([]);
-    const placesRef = useRef(places);
+    const placesRef = useRef<Place[]>(places);
     const famousPlaceRef = useRef(selectedFamousPlace);
 
     // Update refs when values change

@@ -341,6 +341,7 @@ export type TripPlanRequest = {
 }
 
 export type DailyActivity = {
+    time: string;
     name: string;
     type: string;
     address: string;
@@ -348,59 +349,15 @@ export type DailyActivity = {
     duration: string;
     cost: string;
     description: string;
-    tips?: string;
-}
-
-export type Restaurant = {
-    name: string;
-    address: string;
-    coordinates: { lat: number; lng: number };
-    cuisine: string;
-    average_cost: string;
-    recommended_dishes?: string[];
-    description?: string;
-    atmosphere?: string;
 }
 
 export type DailyItinerary = {
     day: number;
     date: string;
     title: string;
-    morning: {
-        time: string;
-        activities: DailyActivity[];
-    };
-    lunch: {
-        time: string;
-        restaurant: Restaurant;
-    };
-    afternoon: {
-        time: string;
-        activities: DailyActivity[];
-    };
-    evening: {
-        time: string;
-        dinner: Restaurant;
-        night_activities: string[];
-    };
-    daily_tips: {
-        weather: string;
-        clothing: string;
-        important_notes: string;
-        estimated_daily_budget: string;
-    };
-    transportation: {
-        getting_around: string;
-        estimated_transport_cost: string;
-    };
-}
-
-export type AccommodationSuggestion = {
-    name: string;
-    type: string;
-    location: string;
-    price_range: string;
-    why_recommended: string;
+    activities: DailyActivity[];
+    estimated_daily_budget: string;
+    transportation_note: string;
 }
 
 export type DetailedTripItinerary = {
@@ -413,22 +370,6 @@ export type DetailedTripItinerary = {
         weather_forecast: string;
     };
     daily_itinerary: DailyItinerary[];
-    accommodation_suggestions: AccommodationSuggestion[];
-    general_tips: {
-        local_customs: string;
-        safety: string;
-        money: string;
-        emergency_contacts:
-            | string
-            | {
-                police?: string;
-                ambulance?: string;
-                fire?: string;
-                tourist_police?: string;
-            };
-        useful_phrases: string[];
-    };
-    packing_list: string[];
     country_flag?: string; // REST Countries API'den gelen bayrak URL'i
     city_image?: string;
 }
@@ -444,9 +385,65 @@ function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null;
 }
 
-function asStringArray(value: unknown): string[] {
-    if (!Array.isArray(value)) return [];
-    return value.filter((item): item is string => typeof item === "string");
+function asNumber(value: unknown, fallback = 0): number {
+    return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function toDailyActivity(value: unknown): DailyActivity {
+    if (!isRecord(value)) {
+        return {
+            time: "",
+            name: "",
+            type: "",
+            address: "",
+            coordinates: { lat: 0, lng: 0 },
+            duration: "",
+            cost: "",
+            description: "",
+        };
+    }
+
+    const coordinates = isRecord(value.coordinates) ? value.coordinates : {};
+
+    return {
+        time: typeof value.time === "string" ? value.time : "",
+        name: typeof value.name === "string" ? value.name : "",
+        type: typeof value.type === "string" ? value.type : "",
+        address: typeof value.address === "string" ? value.address : "",
+        coordinates: {
+            lat: asNumber(coordinates.lat),
+            lng: asNumber(coordinates.lng),
+        },
+        duration: typeof value.duration === "string" ? value.duration : "",
+        cost: typeof value.cost === "string" ? value.cost : "",
+        description: typeof value.description === "string" ? value.description : "",
+    };
+}
+
+function toDailyItinerary(value: unknown, fallbackDay: number): DailyItinerary {
+    if (!isRecord(value)) {
+        return {
+            day: fallbackDay,
+            date: "",
+            title: "",
+            activities: [],
+            estimated_daily_budget: "",
+            transportation_note: "",
+        };
+    }
+
+    return {
+        day: asNumber(value.day, fallbackDay),
+        date: typeof value.date === "string" ? value.date : "",
+        title: typeof value.title === "string" ? value.title : "",
+        activities: Array.isArray(value.activities)
+            ? value.activities.map((activity) => toDailyActivity(activity))
+            : [],
+        estimated_daily_budget:
+            typeof value.estimated_daily_budget === "string" ? value.estimated_daily_budget : "",
+        transportation_note:
+            typeof value.transportation_note === "string" ? value.transportation_note : "",
+    };
 }
 
 function toDetailedTripItinerary(value: unknown): DetailedTripItinerary {
@@ -455,15 +452,6 @@ function toDetailedTripItinerary(value: unknown): DetailedTripItinerary {
     }
 
     const summary = isRecord(value.trip_summary) ? value.trip_summary : {};
-    const generalTips = isRecord(value.general_tips) ? value.general_tips : {};
-    const emergencyContacts = isRecord(generalTips.emergency_contacts)
-        ? {
-            police: typeof generalTips.emergency_contacts.police === "string" ? generalTips.emergency_contacts.police : "",
-            ambulance: typeof generalTips.emergency_contacts.ambulance === "string" ? generalTips.emergency_contacts.ambulance : "",
-            fire: typeof generalTips.emergency_contacts.fire === "string" ? generalTips.emergency_contacts.fire : "",
-            tourist_police: typeof generalTips.emergency_contacts.tourist_police === "string" ? generalTips.emergency_contacts.tourist_police : "",
-        }
-        : (typeof generalTips.emergency_contacts === "string" ? generalTips.emergency_contacts : "");
 
     return {
         trip_summary: {
@@ -474,18 +462,9 @@ function toDetailedTripItinerary(value: unknown): DetailedTripItinerary {
             best_season: typeof summary.best_season === "string" ? summary.best_season : "",
             weather_forecast: typeof summary.weather_forecast === "string" ? summary.weather_forecast : "",
         },
-        daily_itinerary: Array.isArray(value.daily_itinerary) ? (value.daily_itinerary as DailyItinerary[]) : [],
-        accommodation_suggestions: Array.isArray(value.accommodation_suggestions)
-            ? (value.accommodation_suggestions as AccommodationSuggestion[])
+        daily_itinerary: Array.isArray(value.daily_itinerary)
+            ? value.daily_itinerary.map((day, index) => toDailyItinerary(day, index + 1))
             : [],
-        general_tips: {
-            local_customs: typeof generalTips.local_customs === "string" ? generalTips.local_customs : "",
-            safety: typeof generalTips.safety === "string" ? generalTips.safety : "",
-            money: typeof generalTips.money === "string" ? generalTips.money : "",
-            emergency_contacts: emergencyContacts,
-            useful_phrases: asStringArray(generalTips.useful_phrases),
-        },
-        packing_list: asStringArray(value.packing_list),
         country_flag: typeof value.country_flag === "string" ? value.country_flag : undefined,
         city_image: typeof value.city_image === "string" ? value.city_image : undefined,
     };
