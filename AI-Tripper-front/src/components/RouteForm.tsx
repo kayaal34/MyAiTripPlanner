@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoadingModal from "./LoadingModal";
@@ -34,7 +35,11 @@ type NominatimResult = {
     name?: string;
 };
 
-export default function RouteForm() {
+interface RouteFormProps {
+    onRequireAuth?: () => void;
+}
+
+export default function RouteForm({ onRequireAuth }: RouteFormProps) {
     const navigate = useNavigate();
     const { token, user, updateUser } = useAuthStore();
     const setCurrentTripPlan = useTripStore((state) => state.setCurrentTripPlan);
@@ -80,7 +85,7 @@ export default function RouteForm() {
                     .replace(/ç/g, "c");
 
                 const response = await fetch(
-                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=15&addressdetails=1`,
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=15&addressdetails=1&featuretype=city`,
                     { headers: { "User-Agent": "AI-Trip-Planner" } }
                 );
 
@@ -131,7 +136,7 @@ export default function RouteForm() {
             } finally {
                 setIsLoadingSuggestions(false);
             }
-        }, 300);
+        }, 200);
 
         return () => clearTimeout(timeoutId);
     }, [city]);
@@ -177,7 +182,7 @@ export default function RouteForm() {
         }
 
         if (!token) {
-            alert("Plan oluşturmak için giriş yapmalısınız!");
+            onRequireAuth?.();
             return;
         }
 
@@ -329,6 +334,20 @@ export default function RouteForm() {
                                 </div>
                             )}
 
+                            <AnimatePresence>
+                                {isCitySelected && city.trim().length > 0 && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                                        transition={{ duration: 0.28, ease: "easeOut" }}
+                                        className="absolute z-40 w-full top-full mt-3 p-3 bg-emerald-50 border-l-4 border-emerald-500 rounded-lg shadow-lg"
+                                    >
+                                        <p className="text-xs text-emerald-700 font-semibold">✨ Ваш план будет составлен для этого города</p>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             {showCityWarning && !isCitySelected && city.trim().length > 0 && (
                                 <div className="absolute z-40 w-full top-full mt-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-lg">
                                     <p className="text-xs text-red-700">
@@ -479,7 +498,7 @@ export default function RouteForm() {
                     <div className="w-full sm:w-auto text-right">
                         <button
                             type="submit"
-                            disabled={normalLoading || !token}
+                            disabled={normalLoading}
                             className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 md:py-4 px-6 md:px-8 rounded-2xl transition-all shadow-lg shadow-orange-500/30 text-base md:text-lg flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         >
                             <i className={normalLoading ? "fas fa-spinner fa-spin" : "fas fa-magic"}></i>

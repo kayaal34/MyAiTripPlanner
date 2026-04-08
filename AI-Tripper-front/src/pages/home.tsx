@@ -149,7 +149,7 @@ export default function Home() {
                         className="w-full"
                     >
                         <div ref={plannerSectionRef}>
-                            <RouteForm />
+                            <RouteForm onRequireAuth={() => setShowAuthModal(true)} />
                         </div>
                     </motion.div>
                 </div>
