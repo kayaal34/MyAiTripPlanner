@@ -47,6 +47,11 @@ async def get_user_by_username(db: AsyncSession, username: str):
     return result.scalar_one_or_none()
 
 
+async def get_user_by_id(db: AsyncSession, user_id: int):
+    result = await db.execute(select(models.User).filter(models.User.id == user_id))
+    return result.scalar_one_or_none()
+
+
 async def get_user_by_email(db: AsyncSession, email: str):
     result = await db.execute(select(models.User).filter(models.User.email == email))
     return result.scalar_one_or_none()
@@ -69,16 +74,23 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            print("❌ Token'da username (sub) bulunamadı")
+        sub: str = payload.get("sub")
+        if sub is None:
+            print("❌ Token'da sub bulunamadı")
             raise credentials_exception
-        token_data = schemas.TokenData(username=username)
     except JWTError as e:
         print(f"❌ JWT decode hatası: {e}")
         raise credentials_exception
-    
-    user = await get_user_by_username(db, username=token_data.username)
+
+    user = None
+    # New tokens: sub is user.id (stable, unaffected by username changes)
+    if sub.isdigit():
+        user = await get_user_by_id(db, user_id=int(sub))
+
+    # Backward compatibility for old tokens where sub=username
+    if user is None:
+        user = await get_user_by_username(db, username=sub)
+
     if user is None:
         raise credentials_exception
     return user

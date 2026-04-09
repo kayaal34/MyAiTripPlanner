@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { LogIn, User, Settings, Heart, RefreshCw } from "lucide-react";
+import { CreditCard, Heart, LogIn, LogOut, Map, RefreshCw, Settings, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { getCurrentUser } from "../services/api";
@@ -196,13 +196,13 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                                     <div className="bg-gray-100/60 backdrop-blur-2xl rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-gray-200/50 overflow-hidden">
                                         <button
                                             onClick={() => {
-                                                navigate("/profile");
+                                                navigate("/history");
                                                 setShowUserDropdown(false);
                                             }}
                                             className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all font-medium flex items-center gap-3 text-[15px]"
                                         >
-                                            <User className="w-4 h-4" />
-                                            Hesabım
+                                            <Map className="w-4 h-4" />
+                                            Мои поездки
                                         </button>
                                         <button
                                             onClick={() => {
@@ -212,30 +212,40 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                                             className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all border-t border-gray-100 font-medium flex items-center gap-3 text-[15px]"
                                         >
                                             <Heart className="w-4 h-4" />
-                                            Kayıtlı Rotalarım
+                                            Сохраненное
+                                        </button>
+                                        <div className="border-t border-gray-200/80 my-1" />
+                                        <button
+                                            onClick={() => {
+                                                navigate("/profile", { state: { activeTab: "Мой аккаунт" } });
+                                                setShowUserDropdown(false);
+                                            }}
+                                            className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all font-medium flex items-center gap-3 text-[15px]"
+                                        >
+                                            <Settings className="w-4 h-4" />
+                                            Настройки аккаунта
                                         </button>
                                         <button
                                             onClick={() => {
-                                                navigate("/profile");
+                                                navigate("/profile", { state: { activeTab: "Подписка" } });
                                                 setShowUserDropdown(false);
                                             }}
-                                            className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all border-t border-gray-100 font-medium flex items-center gap-3 text-[15px]"
+                                            className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all font-medium flex items-center gap-3 text-[15px]"
                                         >
-                                            <Settings className="w-4 h-4" />
-                                            Hesap Ayarlarım
+                                            <CreditCard className="w-4 h-4" />
+                                            Подписка
                                         </button>
+                                        <div className="border-t border-gray-200/80 my-1" />
                                         <button
                                             onClick={() => {
                                                 logout();
                                                 navigate("/");
                                                 setShowUserDropdown(false);
                                             }}
-                                            className="w-full text-left px-5 py-3 hover:bg-red-50 text-gray-700 hover:text-red-600 transition-all border-t border-gray-100 font-medium flex items-center gap-3 text-[15px]"
+                                            className="w-full text-left px-5 py-3 hover:bg-red-50 text-gray-700 hover:text-red-600 transition-all font-medium flex items-center gap-3 text-[15px]"
                                         >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                            </svg>
-                                            Çıkış Yap
+                                            <LogOut className="w-4 h-4" />
+                                            Выйти
                                         </button>
                                     </div>
                                 </motion.div>

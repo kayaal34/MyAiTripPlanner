@@ -145,6 +145,7 @@ export async function getCurrentUser(token: string): Promise<UserResponse> {
 // ==================== PROFILE API ====================
 
 export type UpdateProfileRequest = {
+    username?: string;
     full_name?: string;
     bio?: string;
     hobbies?: string[];

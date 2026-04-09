@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import timedelta
 
@@ -61,7 +62,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": str(user.id), "username": user.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -77,6 +78,22 @@ async def update_user_profile(
     db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
+    new_username = user_update.username.strip() if user_update.username is not None else None
+
+    if user_update.email is not None and user_update.email != current_user.email:
+        raise HTTPException(status_code=400, detail="Можно изменить только имя пользователя")
+
+    if new_username is not None and new_username != current_user.username:
+        conflict_query = select(models.User).where(
+            models.User.id != current_user.id,
+            models.User.username == new_username,
+        )
+        username_conflict = (await db.execute(conflict_query)).scalars().first()
+        if username_conflict:
+            raise HTTPException(status_code=409, detail="Имя пользователя уже занято")
+
+        current_user.username = new_username
+
     # Update user fields
     if user_update.full_name is not None:
         current_user.full_name = user_update.full_name
