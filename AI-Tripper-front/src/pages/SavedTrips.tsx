@@ -5,7 +5,7 @@ import { useTripStore } from "../store/useTripStore";
 import { getSavedTrips, deleteSavedTrip, type SavedTripResponse } from "../services/api";
 import Navbar from "../components/Navbar";
 import Breadcrumb from "../components/Breadcrumb";
-import { Heart, Calendar, MapPin, Users, Trash2, Eye, Loader2, DollarSign } from "lucide-react";
+import { Heart, Calendar, MapPin, Users, Trash2, Eye, Loader2, DollarSign, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function SavedTrips() {
@@ -81,7 +81,7 @@ export default function SavedTrips() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+        <div className="min-h-screen bg-[#f8fafc] font-sans">
             <Navbar />
 
             <div className="container mx-auto px-4 py-8 max-w-7xl mt-20">
@@ -91,21 +91,21 @@ export default function SavedTrips() {
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
+                    className="mb-10"
                 >
                     <div className="flex items-center gap-3 mb-2">
-                        <Heart className="w-8 h-8 text-pink-500 fill-pink-500" />
-                        <h1 className="text-4xl font-bold text-gray-800">Kayıtlı Rotalarım</h1>
+                        <Heart className="w-8 h-8 text-orange-500 fill-orange-500 drop-shadow-sm" />
+                        <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-sm">Kayıtlı Rotalarım</h1>
                     </div>
-                    <p className="text-gray-600 ml-11">
-                        Favori tatil planlarınız burada saklanıyor
+                    <p className="text-gray-500 ml-11 font-medium">
+                        Favori tatil planlarınız burada güvenle saklanıyor
                     </p>
                 </motion.div>
 
                 {/* Loading State */}
                 {loading && (
                     <div className="flex items-center justify-center py-20">
-                        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+                        <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
                     </div>
                 )}
 
@@ -114,12 +114,12 @@ export default function SavedTrips() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-red-50 border border-red-200 rounded-xl p-6 text-center"
+                        className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center max-w-lg mx-auto shadow-sm"
                     >
-                        <p className="text-red-600 font-medium">{error}</p>
+                        <p className="text-red-700 font-bold mb-4">{error}</p>
                         <button
                             onClick={loadSavedTrips}
-                            className="mt-4 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                            className="px-6 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-sm"
                         >
                             Tekrar Dene
                         </button>
@@ -131,18 +131,20 @@ export default function SavedTrips() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-2xl shadow-lg p-12 text-center"
+                        className="bg-white rounded-3xl shadow-sm border border-gray-200 p-12 text-center max-w-lg mx-auto"
                     >
-                        <Heart className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-                        <h2 className="text-2xl font-bold text-gray-700 mb-2">
+                        <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Sparkles className="w-10 h-10 text-gray-300" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">
                             Henüz Kayıtlı Rota Yok
                         </h2>
-                        <p className="text-gray-500 mb-6">
-                            Tatil planı oluşturup kaydettiğinizde burada görünecek
+                        <p className="text-gray-500 mb-8 font-medium">
+                            Yeni bir tatil planı oluşturup kaydettiğinizde tam olarak burada görünecek.
                         </p>
                         <button
                             onClick={() => navigate("/")}
-                            className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                            className="px-8 py-3.5 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 shadow-lg shadow-orange-500/25 transition-all"
                         >
                             Yeni Plan Oluştur
                         </button>
@@ -158,38 +160,49 @@ export default function SavedTrips() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.1 }}
-                                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all group"
+                                className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-xl hover:border-orange-500/30 transition-all duration-300 group flex flex-col"
                             >
                                 {/* Card Header */}
-                                <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
-                                    <h3 className="text-xl font-bold mb-2 line-clamp-1">
+                                <div className="bg-gray-50/80 border-b border-gray-100 p-6 flex flex-col gap-1.5 relative overflow-hidden">
+                                    <h3 className="text-xl font-extrabold text-gray-900 line-clamp-1 group-hover:text-orange-600 transition-colors z-10 relative pr-6">
                                         {trip.name || `${trip.city} Gezisi`}
                                     </h3>
-                                    <div className="flex items-center gap-2 text-sm opacity-90">
-                                        <Calendar className="w-4 h-4" />
+                                    <div className="flex items-center gap-2 text-xs text-gray-500 font-bold uppercase tracking-wider z-10 relative">
+                                        <Calendar className="w-3.5 h-3.5" />
                                         <span>{new Date(trip.created_at).toLocaleDateString('tr-TR')}</span>
+                                    </div>
+                                    <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 transition-opacity duration-500">
+                                        <MapPin className="w-24 h-24 text-orange-600 -mt-6 -mr-4" />
                                     </div>
                                 </div>
 
                                 {/* Card Body */}
-                                <div className="p-6">
-                                    <div className="space-y-3 mb-6">
-                                        <div className="flex items-center gap-3 text-gray-700">
-                                            <MapPin className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                                            <span className="font-medium">{trip.city}, {trip.country}</span>
+                                <div className="p-6 flex-1 flex flex-col">
+                                    <div className="space-y-4 mb-6 flex-1">
+                                        <div className="flex items-start gap-3">
+                                            <div className="p-2 bg-orange-50 rounded-lg shrink-0 mt-0.5">
+                                                <MapPin className="w-4 h-4 text-orange-500" />
+                                            </div>
+                                            <span className="font-bold text-gray-800 pt-1.5 leading-tight">{trip.city}{trip.country && `, ${trip.country}`}</span>
                                         </div>
-                                        <div className="flex items-center gap-3 text-gray-700">
-                                            <Calendar className="w-5 h-5 text-purple-500 flex-shrink-0" />
-                                            <span>{trip.duration_days} Gün</span>
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-gray-50 rounded-lg shrink-0">
+                                                <Calendar className="w-4 h-4 text-gray-500" />
+                                            </div>
+                                            <span className="font-semibold text-gray-600">{trip.duration_days} Gün</span>
                                         </div>
-                                        <div className="flex items-center gap-3 text-gray-700">
-                                            <Users className="w-5 h-5 text-pink-500 flex-shrink-0" />
-                                            <span className="capitalize">{trip.travelers}</span>
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-gray-50 rounded-lg shrink-0">
+                                                <Users className="w-4 h-4 text-gray-500" />
+                                            </div>
+                                            <span className="capitalize font-semibold text-gray-600">{trip.travelers}</span>
                                         </div>
                                         {trip.budget && (
-                                            <div className="flex items-center gap-3 text-gray-700">
-                                                <DollarSign className="w-5 h-5 text-green-500 flex-shrink-0" />
-                                                <span className="capitalize">{trip.budget} Bütçe</span>
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-gray-50 rounded-lg shrink-0">
+                                                    <DollarSign className="w-4 h-4 text-gray-500" />
+                                                </div>
+                                                <span className="capitalize font-semibold text-gray-600">{trip.budget} Bütçe</span>
                                             </div>
                                         )}
                                     </div>
@@ -199,31 +212,31 @@ export default function SavedTrips() {
                                         {trip.interests.slice(0, 3).map((interest, i) => (
                                             <span
                                                 key={i}
-                                                className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium"
+                                                className="px-3 py-1 bg-gray-50 text-gray-600 text-xs rounded-lg font-bold border border-gray-200"
                                             >
                                                 {interest}
                                             </span>
                                         ))}
                                         {trip.interests.length > 3 && (
-                                            <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">
+                                            <span className="px-3 py-1 bg-gray-50 border border-gray-100 text-gray-400 text-xs rounded-lg font-bold">
                                                 +{trip.interests.length - 3}
                                             </span>
                                         )}
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex gap-3">
+                                    <div className="flex gap-3 mt-auto">
                                         <button
                                             onClick={() => handleViewTrip(trip)}
-                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                                            className="flex-[3] flex items-center justify-center gap-2 px-4 py-3.5 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 hover:border-orange-200 hover:text-orange-600 transition-all shadow-sm group-hover:border-orange-100"
                                         >
-                                            <Eye className="w-5 h-5" />
+                                            <Eye className="w-4 h-4" />
                                             <span>Görüntüle</span>
                                         </button>
                                         <button
                                             onClick={() => handleDeleteTrip(trip.id)}
                                             disabled={deletingId === trip.id}
-                                            className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all disabled:opacity-50"
+                                            className="flex-1 flex items-center justify-center px-4 py-3.5 bg-red-50 border border-red-100 text-red-600 rounded-xl hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
                                             title="Sil"
                                         >
                                             {deletingId === trip.id ? (

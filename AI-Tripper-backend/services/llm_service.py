@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 from typing import Any
 
 import httpx
@@ -10,24 +11,55 @@ from fastapi import HTTPException
 load_dotenv()
 
 
+def _fix_json_string(s: str) -> str:
+    """Fix common JSON issues: trailing commas, unescaped characters."""
+    # Remove trailing commas before } or ]
+    s = re.sub(r",\s*([}\]])", r"\1", s)
+    return s
+
+
 def _extract_json_object(text: str) -> dict[str, Any]:
     """Try strict JSON parse first, then recover from fenced or noisy output."""
+    # 1) Direct parse
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
 
     cleaned = text.strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.strip("`")
-        cleaned = cleaned.replace("json", "", 1).strip()
 
+    # 2) Strip thinking blocks from Gemini 2.5 models
+    cleaned = re.sub(r"<think>.*?</think>", "", cleaned, flags=re.DOTALL).strip()
+
+    # 3) Remove markdown fences
+    if cleaned.startswith("```"):
+        # Extract content between fences
+        fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", cleaned, re.DOTALL)
+        if fence_match:
+            cleaned = fence_match.group(1).strip()
+        else:
+            cleaned = cleaned.strip("`").strip()
+            if cleaned.startswith("json"):
+                cleaned = cleaned[4:].strip()
+
+    # 4) Find outermost JSON object
     start = cleaned.find("{")
     end = cleaned.rfind("}")
     if start == -1 or end == -1 or end <= start:
         raise json.JSONDecodeError("No JSON object found", cleaned, 0)
 
-    return json.loads(cleaned[start : end + 1])
+    json_str = cleaned[start : end + 1]
+
+    # 5) Try direct parse of extracted JSON
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        pass
+
+    # 6) Try with common fixes (trailing commas, etc.)
+    fixed = _fix_json_string(json_str)
+    return json.loads(fixed)
+
 
 
 async def resolve_country_name_from_city(city: str) -> str:
@@ -215,7 +247,7 @@ JSON shape:
             "temperature": 0.5,
             "topP": 0.95,
             "topK": 40,
-            "maxOutputTokens": 4096,
+            "maxOutputTokens": 8192,
             "response_mime_type": "application/json",
         },
         "safetySettings": [
@@ -282,7 +314,10 @@ JSON shape:
 
     try:
         itinerary = _extract_json_object(ai_text)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as parse_err:
+        # Log the raw AI text for debugging
+        print(f"⚠️ JSON parse failed. Raw AI text (first 1000 chars): {ai_text[:1000]}")
+        print(f"⚠️ Parse error: {parse_err}")
         raise HTTPException(
             status_code=500,
             detail="AI returned invalid JSON. Please try again.",

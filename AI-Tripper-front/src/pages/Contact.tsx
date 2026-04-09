@@ -19,22 +19,16 @@ export default function Contact() {
         e.preventDefault();
         setError(null);
         setIsSubmitting(true);
-        
+
         try {
-            // Backend'e mesaj gönder
             await sendContactMessage({
                 name: formData.name,
                 email: formData.email,
                 subject: formData.subject || undefined,
                 message: formData.message
             });
-            
-            // Başarılı, form'u gizle ve başarı mesajını göster
+
             setSubmitted(true);
-            
-            // NOT: Sayfa yenilenene kadar başarı mesajı görünür kalacak
-            // setTimeout kaldırıldı, kullanıcı sayfayı manuel yenilemeli
-            
         } catch (err) {
             console.error("Failed to send message:", err);
             setError(err instanceof Error ? err.message : "Mesaj gönderilemedi. Lütfen tekrar deneyin.");
@@ -50,7 +44,7 @@ export default function Contact() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-16">
+        <div className="min-h-screen bg-[#f8fafc] font-sans py-16">
             <Navbar />
             <div className="max-w-6xl mx-auto px-6 mt-20">
                 {/* Header */}
@@ -59,8 +53,8 @@ export default function Contact() {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center mb-12"
                 >
-                    <h1 className="text-5xl font-display font-extrabold text-gradient mb-4">Свяжитесь с Нами</h1>
-                    <p className="text-xl text-gray-600 font-medium">
+                    <h1 className="text-5xl font-display font-extrabold text-gray-900 mb-4 tracking-tight drop-shadow-sm">Свяжитесь с Нами</h1>
+                    <p className="text-xl text-gray-500 font-medium">
                         Мы всегда рады ответить на ваши вопросы и предложения
                     </p>
                 </motion.div>
@@ -72,53 +66,53 @@ export default function Contact() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.2 }}
                     >
-                        <div className="bg-white rounded-3xl shadow-2xl p-8 h-full">
-                            <h2 className="text-3xl font-bold text-gray-800 mb-6">Информация</h2>
-                            
-                            <div className="space-y-6">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <Mail className="w-6 h-6 text-blue-600" />
+                        <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-10 h-full">
+                            <h2 className="text-3xl font-extrabold text-gray-900 mb-8 tracking-tight">Информация</h2>
+
+                            <div className="space-y-8">
+                                <div className="flex items-start gap-5">
+                                    <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center flex-shrink-0 border border-orange-100">
+                                        <Mail className="w-6 h-6 text-orange-500" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-gray-800 mb-1">Email</h3>
-                                        <a 
-                                            href="mailto:contact@aitripplanner.com" 
-                                            className="text-blue-600 hover:underline"
+                                        <h3 className="font-extrabold text-gray-900 mb-1 text-lg">Email</h3>
+                                        <a
+                                            href="mailto:contact@aitripplanner.com"
+                                            className="text-gray-600 font-medium hover:text-orange-600 transition-colors inline-block"
                                         >
                                             contact@aitripplanner.com
                                         </a>
-                                        <p className="text-gray-500 text-sm mt-1">
+                                        <p className="text-gray-400 text-sm mt-1 font-medium">
                                             Ответим в течение 24 часов
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <Phone className="w-6 h-6 text-green-600" />
+                                <div className="flex items-start gap-5">
+                                    <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center flex-shrink-0 border border-orange-100">
+                                        <Phone className="w-6 h-6 text-orange-500" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-gray-800 mb-1">Телефон</h3>
-                                        <a 
-                                            href="tel:+74951234567" 
-                                            className="text-green-600 hover:underline"
+                                        <h3 className="font-extrabold text-gray-900 mb-1 text-lg">Телефон</h3>
+                                        <a
+                                            href="tel:+74951234567"
+                                            className="text-gray-600 font-medium hover:text-orange-600 transition-colors inline-block"
                                         >
                                             +7 (495) 123-45-67
                                         </a>
-                                        <p className="text-gray-500 text-sm mt-1">
+                                        <p className="text-gray-400 text-sm mt-1 font-medium">
                                             Пн-Пт: 9:00 - 18:00 (МСК)
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                        <MapPin className="w-6 h-6 text-purple-600" />
+                                <div className="flex items-start gap-5">
+                                    <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center flex-shrink-0 border border-orange-100">
+                                        <MapPin className="w-6 h-6 text-orange-500" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-gray-800 mb-1">Адрес</h3>
-                                        <p className="text-gray-600">
+                                        <h3 className="font-extrabold text-gray-900 mb-1 text-lg">Адрес</h3>
+                                        <p className="text-gray-600 font-medium leading-relaxed">
                                             г. Москва, ул. Тверская, д. 1<br />
                                             Офис 123, 125009
                                         </p>
@@ -127,36 +121,37 @@ export default function Contact() {
                             </div>
 
                             {/* Social Links */}
-                            <div className="mt-8 pt-8 border-t">
-                                <h3 className="font-bold text-gray-800 mb-4">Мы в Соцсетях</h3>
+                            <div className="mt-10 pt-8 border-t border-gray-100">
+                                <h3 className="font-extrabold text-gray-900 mb-5">Мы в Соцсетях</h3>
                                 <div className="flex gap-4">
-                                    <a 
-                                        href="#" 
-                                        className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center hover:bg-blue-200 transition"
+                                    <a
+                                        href="#"
+                                        className="w-12 h-12 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-center hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-all text-gray-500 group"
                                     >
-                                        <span className="text-blue-600 font-bold">FB</span>
+                                        <span className="font-bold group-hover:text-orange-600 transition-colors text-sm">FB</span>
                                     </a>
-                                    <a 
-                                        href="#" 
-                                        className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center hover:bg-pink-200 transition"
+                                    <a
+                                        href="#"
+                                        className="w-12 h-12 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-center hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-all text-gray-500 group"
                                     >
-                                        <span className="text-pink-600 font-bold">IG</span>
+                                        <span className="font-bold group-hover:text-orange-600 transition-colors text-sm">IG</span>
                                     </a>
-                                    <a 
-                                        href="#" 
-                                        className="w-10 h-10 bg-sky-100 rounded-full flex items-center justify-center hover:bg-sky-200 transition"
+                                    <a
+                                        href="#"
+                                        className="w-12 h-12 bg-gray-50 border border-gray-200 rounded-2xl flex items-center justify-center hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-all text-gray-500 group"
                                     >
-                                        <span className="text-sky-600 font-bold">TW</span>
+                                        <span className="font-bold group-hover:text-orange-600 transition-colors text-sm">TW</span>
                                     </a>
                                 </div>
                             </div>
 
                             {/* Map Image */}
-                            <div className="mt-8">
+                            <div className="mt-10 relative">
+                                <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/10 pointer-events-none z-10"></div>
                                 <img
                                     src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600"
                                     alt="Office Location"
-                                    className="rounded-2xl w-full h-48 object-cover"
+                                    className="rounded-2xl w-full h-56 object-cover shadow-sm"
                                 />
                             </div>
                         </div>
@@ -168,36 +163,38 @@ export default function Contact() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.3 }}
                     >
-                        <div className="bg-white rounded-3xl shadow-2xl p-8">
-                            <h2 className="text-3xl font-bold text-gray-800 mb-6">Напишите Нам</h2>
-                            
+                        <div className="bg-white border border-gray-200 rounded-3xl shadow-sm p-10 h-full">
+                            <h2 className="text-3xl font-extrabold text-gray-900 mb-8 tracking-tight">Напишите Нам</h2>
+
                             {error && (
-                                <div className="mb-6 bg-red-50 border-2 border-red-500 rounded-2xl p-4">
-                                    <p className="text-red-600 text-sm">{error}</p>
+                                <div className="mb-6 bg-red-50/80 border border-red-200 rounded-2xl p-5">
+                                    <p className="text-red-700 font-bold text-sm flex items-center gap-2">
+                                        <span className="text-xl">⚠️</span> {error}
+                                    </p>
                                 </div>
                             )}
-                            
+
                             {submitted ? (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className="bg-green-50 border-2 border-green-500 rounded-2xl p-8 text-center"
+                                    className="bg-green-50 border border-green-200 rounded-3xl p-10 text-center h-full flex flex-col justify-center items-center"
                                 >
-                                    <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <Send className="w-8 h-8 text-white" />
+                                    <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/30">
+                                        <Send className="w-10 h-10 text-white ml-2" />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-green-700 mb-2">Спасибо!</h3>
-                                    <p className="text-green-600 mb-4">
-                                        Ваше сообщение успешно отправлено. Мы свяжемся с вами в ближайшее время.
+                                    <h3 className="text-3xl font-extrabold text-green-800 mb-3 tracking-tight">Спасибо!</h3>
+                                    <p className="text-green-700 font-medium text-lg leading-relaxed mb-6">
+                                        Ваше сообщение успешно отправлено.<br />Мы свяжемся с вами в ближайшее время.
                                     </p>
-                                    <p className="text-sm text-green-500">
-                                        Сообщение сохранено в нашей базе данных.
+                                    <p className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-xl text-sm font-bold">
+                                        ✓ Сохранено в системе
                                     </p>
                                 </motion.div>
                             ) : (
                                 <form onSubmit={handleSubmit} className="space-y-6">
                                     <div>
-                                        <label className="block text-gray-700 font-medium mb-2">
+                                        <label className="block text-gray-700 font-bold mb-2">
                                             Ваше Имя *
                                         </label>
                                         <input
@@ -207,13 +204,13 @@ export default function Contact() {
                                             onChange={handleChange}
                                             required
                                             disabled={isSubmitting}
-                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
+                                            className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all disabled:opacity-50 font-medium text-gray-900"
                                             placeholder="Иван Иванов"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-gray-700 font-medium mb-2">
+                                        <label className="block text-gray-700 font-bold mb-2">
                                             Email *
                                         </label>
                                         <input
@@ -223,13 +220,13 @@ export default function Contact() {
                                             onChange={handleChange}
                                             required
                                             disabled={isSubmitting}
-                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
+                                            className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all disabled:opacity-50 font-medium text-gray-900"
                                             placeholder="ivan@example.com"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-gray-700 font-medium mb-2">
+                                        <label className="block text-gray-700 font-bold mb-2">
                                             Тема
                                         </label>
                                         <input
@@ -238,13 +235,13 @@ export default function Contact() {
                                             value={formData.subject}
                                             onChange={handleChange}
                                             disabled={isSubmitting}
-                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
+                                            className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all disabled:opacity-50 font-medium text-gray-900"
                                             placeholder="Вопрос о планировании"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-gray-700 font-medium mb-2">
+                                        <label className="block text-gray-700 font-bold mb-2">
                                             Сообщение *
                                         </label>
                                         <textarea
@@ -254,7 +251,7 @@ export default function Contact() {
                                             required
                                             rows={5}
                                             disabled={isSubmitting}
-                                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition resize-none disabled:opacity-50"
+                                            className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 outline-none transition-all resize-none disabled:opacity-50 font-medium text-gray-900"
                                             placeholder="Расскажите нам, чем мы можем помочь..."
                                         />
                                     </div>
@@ -262,10 +259,16 @@ export default function Contact() {
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                                     >
-                                        <Send className="w-5 h-5" />
-                                        {isSubmitting ? "Отправка..." : "Отправить Сообщение"}
+                                        {isSubmitting ? (
+                                            "Отправка..."
+                                        ) : (
+                                            <>
+                                                <Send className="w-5 h-5 ml-1" />
+                                                <span>Отправить Сообщение</span>
+                                            </>
+                                        )}
                                     </button>
                                 </form>
                             )}
