@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoadingModal from "./LoadingModal";
 import { createDetailedTripPlan } from "../services/api";
@@ -45,6 +45,9 @@ export default function RouteForm({ onRequireAuth }: RouteFormProps) {
     const setCurrentTripPlan = useTripStore((state) => state.setCurrentTripPlan);
     const setCurrentTripFormData = useTripStore((state) => state.setCurrentTripFormData);
 
+    const cityInputRef = useRef<HTMLInputElement>(null);
+    const isSelectingCityRef = useRef(false);
+
     const [city, setCity] = useState("");
     const [days, setDays] = useState("3");
     const [travelers, setTravelers] = useState("");
@@ -61,6 +64,11 @@ export default function RouteForm({ onRequireAuth }: RouteFormProps) {
     const [showCityWarning, setShowCityWarning] = useState(false);
 
     useEffect(() => {
+        if (isCitySelected) {
+            setShowSuggestions(false);
+            return;
+        }
+
         if (city.trim().length < 1) {
             setCitySuggestions([]);
             setShowSuggestions(false);
@@ -139,7 +147,7 @@ export default function RouteForm({ onRequireAuth }: RouteFormProps) {
         }, 200);
 
         return () => clearTimeout(timeoutId);
-    }, [city]);
+    }, [city, isCitySelected]);
 
     const interestOptions = [
         "Культура",
@@ -287,13 +295,20 @@ export default function RouteForm({ onRequireAuth }: RouteFormProps) {
                                 type="text"
                                 placeholder="Где отдохнем?"
                                 value={city}
+                                   ref={cityInputRef}
                                 onChange={(e) => {
-                                    setCity(e.target.value);
-                                    setIsCitySelected(false);
+                                    const newValue = e.target.value;
+                                    setCity(newValue);
+                                    // Sadece manuel yazış durumunda sıfırla, suggestion seçimi değil
+                                    if (!isSelectingCityRef.current) {
+                                        setIsCitySelected(false);
+                                    }
                                     setShowCityWarning(false);
                                 }}
                                 onFocus={() => {
-                                    if (citySuggestions.length > 0) setShowSuggestions(true);
+                                    if (citySuggestions.length > 0 && !isCitySelected) {
+                                        setShowSuggestions(true);
+                                    }
                                     setShowCityWarning(false);
                                 }}
                                 onBlur={() => {
@@ -316,9 +331,14 @@ export default function RouteForm({ onRequireAuth }: RouteFormProps) {
                                             key={index}
                                             type="button"
                                             onClick={() => {
+                                                isSelectingCityRef.current = true;
                                                 setCity(suggestion);
                                                 setIsCitySelected(true);
                                                 setShowSuggestions(false);
+                                                setCitySuggestions([]);
+                                                isSelectingCityRef.current = false;
+                                                   // Menu'yi kesin kapat
+                                                   cityInputRef.current?.blur();
                                             }}
                                             className="w-full text-left px-5 py-3 hover:bg-orange-50 transition-colors border-b border-gray-50 last:border-b-0"
                                         >
