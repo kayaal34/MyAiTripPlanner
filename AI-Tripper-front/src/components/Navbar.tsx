@@ -79,21 +79,21 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
             <div className="flex items-center gap-8 absolute left-1/2 transform -translate-x-1/2">
                 <button
                     onClick={() => navigate("/")}
-                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-[15px]"
+                    className="text-gray-900 hover:text-blue-600 font-bold transition-colors text-[15px]"
                 >
                     Главная страница
                 </button>
 
                 <button
                     onClick={() => navigate("/destinations")}
-                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-[15px]"
+                    className="text-gray-900 hover:text-blue-600 font-bold transition-colors text-[15px]"
                 >
                     Города отдыха
                 </button>
 
                 <button
                     onClick={() => navigate("/pricing")}
-                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors text-[15px] flex items-center gap-1.5"
+                    className="text-gray-900 hover:text-blue-600 font-bold transition-colors text-[15px] flex items-center gap-1.5"
                 >
                     <span className="text-yellow-500"></span>
                     Подписки
@@ -105,7 +105,7 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                     onMouseEnter={() => setShowKurumsalDropdown(true)}
                     onMouseLeave={() => setShowKurumsalDropdown(false)}
                 >
-                    <button className="text-gray-700 hover:text-blue-600 font-medium transition-colors flex items-center gap-1 text-[15px]">
+                    <button className="text-gray-900 hover:text-blue-600 font-bold transition-colors flex items-center gap-1 text-[15px]">
                         Институциональный
                         <svg className={`w-3.5 h-3.5 transition-transform ${showKurumsalDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -122,13 +122,13 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                             <div className="bg-gray-100/60 backdrop-blur-2xl rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-gray-200/50 overflow-hidden">
                                 <button
                                     onClick={() => navigate("/about")}
-                                    className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all font-medium text-[15px]"
+                                    className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-900 hover:text-blue-600 transition-all font-bold text-[15px]"
                                 >
                                     О Нас
                                 </button>
                                 <button
                                     onClick={() => navigate("/contact")}
-                                    className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-700 hover:text-blue-600 transition-all border-t border-gray-100 font-medium text-[15px]"
+                                    className="w-full text-left px-5 py-3 hover:bg-blue-50/80 text-gray-900 hover:text-blue-600 transition-all border-t border-gray-100 font-bold text-[15px]"
                                 >
                                     Связаться с Нами
                                 </button>
@@ -156,9 +156,9 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                                 {user.remaining_routes === -1 ? (
                                     <span>∞ Sınırsız</span>
                                 ) : user.remaining_routes === 0 ? (
-                                    <span>0 Rota</span>
+                                    <span>0 Маршрут</span>
                                 ) : (
-                                    <span>{user.remaining_routes} Rota</span>
+                                    <span>{user.remaining_routes} Маршрут</span>
                                 )}
                             </div>
 
@@ -178,7 +178,7 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                             onMouseEnter={() => setShowUserDropdown(true)}
                             onMouseLeave={() => setShowUserDropdown(false)}
                         >
-                            <button className="px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 rounded-lg text-gray-700 font-medium transition-all flex items-center gap-2 border border-gray-200 text-[15px]">
+                            <button className="px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 rounded-lg text-gray-900 font-bold transition-all flex items-center gap-2 border border-gray-200 text-[15px]">
                                 <User className="w-4 h-4" />
                                 {user.username}
                                 <svg className={`w-3.5 h-3.5 transition-transform ${showUserDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +258,7 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                         className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-5 py-2 rounded-lg font-medium transition-all shadow-sm hover:shadow-md text-[15px]"
                     >
                         <LogIn className="w-4 h-4" />
-                        Giriş
+                        Войти
                     </button>
                 ) : null}
             </div>

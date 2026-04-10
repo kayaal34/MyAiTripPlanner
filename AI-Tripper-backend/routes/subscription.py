@@ -70,20 +70,20 @@ PLANS = {
         name="Free",
         price=0,
         features=[
-            "3 rota planı/ay",
-            "Temel AI önerileri",
-            "Harita görünümü"
+            "3 плана маршрута/месяц",
+            "Базовые ИИ-рекомендации",
+            "Просмотр на карте"
         ]
     ),
     "premium": PlanInfo(
         name="Premium",
         price=9.99,
         features=[
-            "Sınırsız rota planı",
-            "Gelişmiş AI önerileri",
-            "Detaylı gün gün program",
-            "Favori yerler kaydetme",
-            "Öncelikli destek"
+            "Безлимитные планы маршрутов",
+            "Продвинутые ИИ-рекомендации",
+            "Ежедневная подробная программа",
+            "Сохранение любимых мест",
+            "Приоритетная поддержка"
         ],
         stripe_price_id=os.getenv("STRIPE_PREMIUM_PRICE_ID")
     ),
@@ -91,12 +91,12 @@ PLANS = {
         name="Pro",
         price=19.99,
         features=[
-            "Premium'daki tüm özellikler",
-            "Özel AI asistanı",
-            "Offline haritalar",
-            "Grup planlaması",
-            "VIP destek",
-            "Erken erişim özellikleri"
+            "Все функции Premium",
+            "Специальный ИИ-ассистент",
+            "Офлайн-карты",
+            "Групповое планирование",
+            "VIP-поддержка",
+            "Функции раннего доступа"
         ],
         stripe_price_id=os.getenv("STRIPE_PRO_PRICE_ID")
     )

@@ -40,7 +40,7 @@ export default function SavedTrips() {
             setTrips(data);
         } catch (err: any) {
             console.error("Error loading saved trips:", err);
-            setError(err.message || "Kayıtlı rotalar yüklenemedi");
+            setError(err.message || "Не удалось загрузить сохраненные маршруты");
         } finally {
             setLoading(false);
         }
@@ -63,7 +63,7 @@ export default function SavedTrips() {
     const handleDeleteTrip = async (tripId: number) => {
         if (!token) return;
         
-        if (!confirm("Bu rotayı silmek istediğinize emin misiniz?")) {
+        if (!confirm("Вы уверены, что хотите удалить этот маршрут?")) {
             return;
         }
 
@@ -74,7 +74,7 @@ export default function SavedTrips() {
             setTrips(trips.filter((t) => t.id !== tripId));
         } catch (err: any) {
             console.error("Error deleting trip:", err);
-            alert("Rota silinemedi: " + (err.message || "Bilinmeyen hata"));
+            alert("Не удалось удалить маршрут: " + (err.message || "Неизвестная ошибка"));
         } finally {
             setDeletingId(null);
         }
@@ -85,7 +85,7 @@ export default function SavedTrips() {
             <Navbar />
 
             <div className="container mx-auto px-4 py-8 max-w-7xl mt-20">
-                <Breadcrumb items={[{ label: "Kayıtlı Rotalarım" }]} />
+                <Breadcrumb items={[{ label: "Мои сохраненные маршруты" }]} />
                 
                 {/* Header */}
                 <motion.div
@@ -95,10 +95,10 @@ export default function SavedTrips() {
                 >
                     <div className="flex items-center gap-3 mb-2">
                         <Heart className="w-8 h-8 text-orange-500 fill-orange-500 drop-shadow-sm" />
-                        <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-sm">Kayıtlı Rotalarım</h1>
+                        <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-sm">Мои сохраненные маршруты</h1>
                     </div>
                     <p className="text-gray-500 ml-11 font-medium">
-                        Favori tatil planlarınız burada güvenle saklanıyor
+                        Здесь надежно хранятся ваши любимые планы отпуска
                     </p>
                 </motion.div>
 
@@ -121,7 +121,7 @@ export default function SavedTrips() {
                             onClick={loadSavedTrips}
                             className="px-6 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-sm"
                         >
-                            Tekrar Dene
+                            Попробовать снова
                         </button>
                     </motion.div>
                 )}
@@ -137,16 +137,16 @@ export default function SavedTrips() {
                             <Sparkles className="w-10 h-10 text-gray-300" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                            Henüz Kayıtlı Rota Yok
+                            Пока нет сохраненных маршрутов
                         </h2>
                         <p className="text-gray-500 mb-8 font-medium">
-                            Yeni bir tatil planı oluşturup kaydettiğinizde tam olarak burada görünecek.
+                            Когда вы создадите и сохраните новый план отпуска, он появится прямо здесь.
                         </p>
                         <button
                             onClick={() => navigate("/")}
                             className="px-8 py-3.5 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 shadow-lg shadow-orange-500/25 transition-all"
                         >
-                            Yeni Plan Oluştur
+                            Создать новый план
                         </button>
                     </motion.div>
                 )}
@@ -165,7 +165,7 @@ export default function SavedTrips() {
                                 {/* Card Header */}
                                 <div className="bg-gray-50/80 border-b border-gray-100 p-6 flex flex-col gap-1.5 relative overflow-hidden">
                                     <h3 className="text-xl font-extrabold text-gray-900 line-clamp-1 group-hover:text-orange-600 transition-colors z-10 relative pr-6">
-                                        {trip.name || `${trip.city} Gezisi`}
+                                        {trip.name || `Поездка в ${trip.city}`}
                                     </h3>
                                     <div className="flex items-center gap-2 text-xs text-gray-500 font-bold uppercase tracking-wider z-10 relative">
                                         <Calendar className="w-3.5 h-3.5" />
@@ -189,7 +189,7 @@ export default function SavedTrips() {
                                             <div className="p-2 bg-gray-50 rounded-lg shrink-0">
                                                 <Calendar className="w-4 h-4 text-gray-500" />
                                             </div>
-                                            <span className="font-semibold text-gray-600">{trip.duration_days} Gün</span>
+                                            <span className="font-semibold text-gray-600">{trip.duration_days} Дней</span>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-gray-50 rounded-lg shrink-0">
@@ -202,7 +202,7 @@ export default function SavedTrips() {
                                                 <div className="p-2 bg-gray-50 rounded-lg shrink-0">
                                                     <DollarSign className="w-4 h-4 text-gray-500" />
                                                 </div>
-                                                <span className="capitalize font-semibold text-gray-600">{trip.budget} Bütçe</span>
+                                                <span className="capitalize font-semibold text-gray-600">Бюджет: {trip.budget}</span>
                                             </div>
                                         )}
                                     </div>
@@ -230,14 +230,15 @@ export default function SavedTrips() {
                                             onClick={() => handleViewTrip(trip)}
                                             className="flex-[3] flex items-center justify-center gap-2 px-4 py-3.5 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 hover:border-orange-200 hover:text-orange-600 transition-all shadow-sm group-hover:border-orange-100"
                                         >
+                                            <span className="sr-only">Посмотреть</span>
                                             <Eye className="w-4 h-4" />
-                                            <span>Görüntüle</span>
+                                            <span>Посмотреть</span>
                                         </button>
                                         <button
                                             onClick={() => handleDeleteTrip(trip.id)}
                                             disabled={deletingId === trip.id}
                                             className="flex-1 flex items-center justify-center px-4 py-3.5 bg-red-50 border border-red-100 text-red-600 rounded-xl hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
-                                            title="Sil"
+                                            title="Удалить"
                                         >
                                             {deletingId === trip.id ? (
                                                 <Loader2 className="w-5 h-5 animate-spin" />

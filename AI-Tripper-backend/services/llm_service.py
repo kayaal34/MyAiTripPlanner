@@ -250,9 +250,8 @@ JSON shape:
 }}
 """
 
-    # Retry delays for rate-limit errors (free tier = 5 RPM → need ≥12s between requests)
-    # Attempt 0→1: wait 15s, 1→2: wait 30s, 2→3: wait 60s
-    RATE_LIMIT_DELAYS = [15, 30, 60]
+    # Retry delays: Attempt 0->1: 2s, 1->2: 4s, 2->3: 8s
+    RATE_LIMIT_DELAYS = [2, 4, 8]
     MAX_ATTEMPTS = len(RATE_LIMIT_DELAYS) + 1  # 4 total
 
     timeout = httpx.Timeout(connect=30.0, read=120.0, write=30.0, pool=30.0)
@@ -314,18 +313,21 @@ JSON shape:
         if is_rate_limit and attempt < MAX_ATTEMPTS - 1:
             wait_sec = RATE_LIMIT_DELAYS[attempt]
             key_hint = f" (deneniyor: anahtar {key_index % len(api_keys) + 1}/{len(api_keys)})" if len(api_keys) > 1 else ""
-            print(f"⏳ Rate limit (deneme {attempt + 1}/{MAX_ATTEMPTS}). {wait_sec}s bekleniyor{key_hint}...")
+            print(f"⚠️ HATA KODU: {response.status_code}. ⏳ Yeniden deneniyor (deneme {attempt + 1}/{MAX_ATTEMPTS}). {wait_sec}s bekleniyor{key_hint}...")
             await asyncio.sleep(wait_sec)
             continue
 
         # Non-retryable error or exhausted retries
+        if response.status_code == 503:
+            error_msg = f"Gemini API şu an Google sunucularındaki yoğunluk nedeniyle yanıt veremiyor (503 Service Unavailable).\nDetay: {last_error_detail}"
+        elif response.status_code == 429:
+            error_msg = f"Gemini API istek limitine ulaşıldı (429 Too Many Requests). Sistemsel bir kota aşımı söz konusu.\nDetay: {last_error_detail}"
+        else:
+            error_msg = last_error_detail
+
         raise HTTPException(
-            status_code=503 if is_rate_limit else 500,
-            detail=(
-                "Gemini API şu an yoğun. Ücretsiz planda dakikada 5 istek sınırı var. "
-                "Lütfen 1-2 dakika bekleyip tekrar deneyin. "
-                "İkinci bir API anahtarı eklemek için .env dosyasına GOOGLE_API_KEY_2 ekleyebilirsiniz."
-            ) if is_rate_limit else last_error_detail,
+            status_code=response.status_code if is_rate_limit else 500,
+            detail=error_msg,
         )
 
     if response is None:

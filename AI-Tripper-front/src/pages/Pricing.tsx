@@ -39,9 +39,9 @@ const Pricing = () => {
             console.error('Plan yüklenemedi:', error);
             // Fallback planlar göster
             setPlans([
-                { id: 'free', name: 'Free', price: 0, features: ['3 rota planı/ay', 'Temel AI önerileri'] },
-                { id: 'premium', name: 'Premium', price: 9.99, features: ['Sınırsız rota planı', 'Gelişmiş AI'] },
-                { id: 'pro', name: 'Pro', price: 19.99, features: ['Premium özellikleri', 'VIP destek'] },
+                { id: 'free', name: 'Free', price: 0, features: ['3 плана/месяц', 'Базовые ИИ-рекомендации'] },
+                { id: 'premium', name: 'Premium', price: 9.99, features: ['Безлимитные планы', 'Продвинутый ИИ'] },
+                { id: 'pro', name: 'Pro', price: 19.99, features: ['Премиум-функции', 'VIP-поддержка'] },
             ]);
         }
     };
@@ -69,12 +69,12 @@ const Pricing = () => {
 
     const handleSubscribe = async (planId: string) => {
         if (planId === 'free') {
-            alert('Zaten ücretsiz plandayız!');
+            alert('Вы уже на бесплатном плане!');
             return;
         }
 
         if (!isAuthenticated || !token) {
-            alert('Lütfen önce giriş yapın! Anasayfada giriş yapabilirsiniz.');
+            alert('Пожалуйста, войдите в систему! Вы можете сделать это на главной странице.');
             navigate('/', { state: { openAuthModal: true } });
             return;
         }
@@ -100,7 +100,7 @@ const Pricing = () => {
 
             if (response.data?.demo) {
                 // DEMO mode - direkt başarılı
-                alert(response.data.message || '🎉 Premium aktif edildi!');
+                alert(response.data.message || '🎉 Премиум активирован!');
 
                 // Update user's remaining routes to unlimited (-1)
                 if (user) {
@@ -122,12 +122,12 @@ const Pricing = () => {
             }
         } catch (error: any) {
             console.error('Checkout hatası:', error);
-            let errorMessage = 'Bir hata oluştu. Lütfen tekrar deneyin.';
+            let errorMessage = 'Произошла ошибка. Пожалуйста, попробуйте еще раз.';
 
             if (error.response) {
                 errorMessage = error.response.data?.detail || errorMessage;
             } else if (error.request) {
-                errorMessage = 'Sunucuya bağlanılamadı. Backend çalışıyor mu kontrol edin.';
+                errorMessage = 'Не удалось подключиться к серверу.';
             }
 
             alert(errorMessage);
@@ -136,12 +136,12 @@ const Pricing = () => {
     };
 
     const handleCancelSubscription = async () => {
-        if (!confirm('Aboneliği iptal etmek istediğinizden emin misiniz?')) {
+        if (!confirm('Вы уверены, что хотите отменить подписку?')) {
             return;
         }
 
         if (!isAuthenticated || !token) {
-            alert('Lütfen giriş yapın!');
+            alert('Пожалуйста, войдите в систему!');
             return;
         }
 
@@ -160,16 +160,16 @@ const Pricing = () => {
                 }
             );
 
-            alert('Abonelik dönem sonunda iptal edilecek');
+            alert('Подписка будет отменена в конце текущего периода.');
             await loadCurrentSubscription();
         } catch (error: any) {
             console.error('İptal hatası:', error);
-            let errorMessage = 'İptal işlemi başarısız';
+            let errorMessage = 'Ошибка при отмене подписки';
 
             if (error.response) {
                 errorMessage = error.response.data?.detail || errorMessage;
             } else if (error.request) {
-                errorMessage = 'Sunucuya bağlanılamadı';
+                errorMessage = 'Не удалось подключиться к серверу';
             }
 
             alert(errorMessage);
@@ -192,15 +192,15 @@ const Pricing = () => {
                     {/* Header */}
                     <div className="text-center mb-16">
                         <h1 className="text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">
-                            Seyahat Planlarını <span className="text-orange-500 underline decoration-orange-300 decoration-4 underline-offset-8">Güçlendir</span>
+                            Прокачайте свои <span className="text-orange-500 underline decoration-orange-300 decoration-4 underline-offset-8">Планы путешествий</span>
                         </h1>
                         <p className="text-xl text-gray-500 font-medium">
-                            AI destekli seyahat planlaması ile hayallerinizdeki tatili yaratın
+                            Создайте отпуск своей мечты с mytripplanner
                         </p>
                         {currentPlan !== 'free' && (
                             <div className="mt-6">
                                 <span className="inline-block bg-orange-100/50 border border-orange-200 text-orange-700 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm">
-                                    Aktif Plan: {currentPlan.toUpperCase()}
+                                    Текущий план: {currentPlan.toUpperCase()}
                                 </span>
                             </div>
                         )}
@@ -222,7 +222,7 @@ const Pricing = () => {
                                     {isPopular && (
                                         <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 z-20">
                                             <span className="bg-orange-500 text-white px-5 py-2 rounded-xl text-sm font-extrabold shadow-lg shadow-orange-500/30 border-2 border-white uppercase tracking-widest flex items-center justify-center gap-2 whitespace-nowrap">
-                                                ⭐ EN POPÜLER
+                                                ⭐ САМЫЙ ПОПУЛЯРНЫЙ
                                             </span>
                                         </div>
                                     )}
@@ -232,7 +232,7 @@ const Pricing = () => {
                                         <div className="absolute top-4 right-4 z-20">
                                             <span className="bg-green-500 border-2 border-white text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center shadow-md">
                                                 <Check className="w-3.5 h-3.5 mr-1" />
-                                                Aktif
+                                                Активен
                                             </span>
                                         </div>
                                     )}
@@ -248,7 +248,7 @@ const Pricing = () => {
                                                 ${plan.price}
                                             </span>
                                             {plan.price > 0 && (
-                                                <span className="text-gray-500 ml-2 font-bold uppercase tracking-wider text-sm">/ay</span>
+                                                <span className="text-gray-500 ml-2 font-bold uppercase tracking-wider text-sm">/мес</span>
                                             )}
                                         </div>
                                     </div>
@@ -279,14 +279,14 @@ const Pricing = () => {
                                         {checkoutLoading === plan.id ? (
                                             <span className="flex items-center justify-center">
                                                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                                                Bekleniyor...
+                                                Ожидание...
                                             </span>
                                         ) : isCurrentPlan ? (
-                                            'Mevcut Plan'
+                                            'Текущий план'
                                         ) : plan.price === 0 ? (
-                                            'Ücretsiz Başla'
+                                            'Начать бесплатно'
                                         ) : (
-                                            'Premium Ol'
+                                            'Получить Premium'
                                         )}
                                     </button>
                                 </div>
@@ -304,13 +304,13 @@ const Pricing = () => {
                             >
                                 {loading ? (
                                     <>
-                                        <Loader2 className="w-4 h-4 animate-spin" /> İşleniyor...
+                                        <Loader2 className="w-4 h-4 animate-spin" /> Обработка...
                                     </>
                                 ) : (
-                                    'Aboneliği İptal Et'
+                                    'Отменить подписку'
                                 )}
                             </button>
-                            <p className="text-xs text-gray-400 mt-2">Dilediğiniz zaman iptal edebilirsiniz.</p>
+                            <p className="text-xs text-gray-400 mt-2">Вы можете отменить подписку в любой момент.</p>
                         </div>
                     )}
 
@@ -318,11 +318,11 @@ const Pricing = () => {
                     <div className="mt-16 text-center">
                         <div className="inline-flex flex-col md:flex-row items-center gap-6 bg-white border border-gray-200 rounded-2xl px-8 py-5 shadow-sm">
                             <p className="text-sm font-bold text-gray-600 flex items-center gap-2">
-                                <span className="text-xl">💳</span> Kredi kartı ödemeleri güvenli sağlanmaktadır.
+                                <span className="text-xl">💳</span> Платежи по кредитным картам безопасно защищены.
                             </p>
                             <div className="hidden md:block w-px h-6 bg-gray-200"></div>
                             <p className="text-sm font-bold text-gray-600 flex items-center gap-2">
-                                <span className="text-xl">❓</span> Destek için: <a href="mailto:support@aitripper.com" className="text-orange-500 hover:text-orange-600">support@aitripper.com</a>
+                                <span className="text-xl">❓</span> Служба поддержки: <a href="mailto:support@aitripper.com" className="text-orange-500 hover:text-orange-600">support@aitripper.com</a>
                             </p>
                         </div>
                     </div>

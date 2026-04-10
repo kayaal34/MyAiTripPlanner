@@ -54,7 +54,7 @@ export default function RouteForm({ onRequireAuth }: RouteFormProps) {
     const [interests, setInterests] = useState<string[]>([]);
     const [budget, setBudget] = useState("orta");
     const [normalLoading, setNormalLoading] = useState(false);
-    const [currentLoadingMessage, setCurrentLoadingMessage] = useState("Plan hazırlanıyor...");
+    const [currentLoadingMessage, setCurrentLoadingMessage] = useState("Планирование...");
     const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
     const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
@@ -93,7 +93,7 @@ export default function RouteForm({ onRequireAuth }: RouteFormProps) {
                     .replace(/ç/g, "c");
 
                 const response = await fetch(
-                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=15&addressdetails=1&featuretype=city`,
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=15&addressdetails=1&featuretype=city&accept-language=ru`,
                     { headers: { "User-Agent": "AI-Trip-Planner" } }
                 );
 
@@ -197,12 +197,12 @@ export default function RouteForm({ onRequireAuth }: RouteFormProps) {
         setNormalLoading(true);
 
         const messages = [
-            "🔍 Form verileri işleniyor...",
-            `🌍 ${city} için detaylı plan hazırlanıyor...`,
-            "🤖 En popüler mekanlar araştırıyor...",
-            "🍽️ Restoran önerileri hazırlanıyor...",
-            "🗺️ Her gün için rota oluşturuluyor...",
-            "✨ Son detaylar ekleniyor...",
+            "Обработка данных формы...",
+            `Составляется подробный план для ${city}...`,
+            "Исследуются популярные места...",
+            "Подбираются лучшие рестораны...",
+            "Формируется маршрут на каждый день...",
+            "Добавляются финальные детали...",
         ];
 
         let messageIndex = 0;
@@ -233,7 +233,7 @@ export default function RouteForm({ onRequireAuth }: RouteFormProps) {
 
             clearInterval(messageInterval);
             setNormalLoading(false);
-            setCurrentLoadingMessage("Plan hazırlanıyor...");
+            setCurrentLoadingMessage("Планирование...");
 
             if (response.remaining_routes !== undefined && user) {
                 updateUser({ ...user, remaining_routes: response.remaining_routes });
@@ -252,7 +252,7 @@ export default function RouteForm({ onRequireAuth }: RouteFormProps) {
         } catch (error: unknown) {
             clearInterval(messageInterval);
             setNormalLoading(false);
-            setCurrentLoadingMessage("Plan hazırlanıyor...");
+            setCurrentLoadingMessage("Планирование...");
 
             const message = error instanceof Error ? error.message : "Plan oluşturulamadı. Lütfen tekrar deneyin.";
             console.error("❌ Plan oluşturma hatası:", error);

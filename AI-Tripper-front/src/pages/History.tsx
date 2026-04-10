@@ -26,7 +26,7 @@ export default function History() {
                 setHistory(data);
             } catch (err: any) {
                 console.error("Failed to load history:", err);
-                setError(err.message || "Geçmiş yüklenemedi");
+                setError(err.message || "Не удалось загрузить историю");
             } finally {
                 setLoading(false);
             }
@@ -40,8 +40,8 @@ export default function History() {
             <Navbar />
             <div className="container mx-auto px-4 py-8 max-w-7xl mt-20">
                 <Breadcrumb items={[
-                    { label: "Hesabım", path: "/profile" },
-                    { label: "Hareketlerim" }
+                    { label: "Мой аккаунт", path: "/profile" },
+                    { label: "Моя история" }
                 ]} />
 
                 <motion.div
@@ -51,10 +51,10 @@ export default function History() {
                 >
                     <div className="flex items-center gap-3 mb-2">
                         <Clock className="w-8 h-8 text-orange-500 drop-shadow-sm" />
-                        <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-sm">Hareketlerim</h1>
+                        <h1 className="text-4xl font-extrabold text-gray-900 drop-shadow-sm">Моя история</h1>
                     </div>
                     <p className="text-gray-500 ml-11 font-medium">
-                        Son oluşturduğunuz tüm tatil planları burada
+                        Здесь находятся все ваши недавно созданные планы отпуска
                     </p>
                 </motion.div>
 
@@ -75,7 +75,7 @@ export default function History() {
                             onClick={() => window.location.reload()}
                             className="px-6 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors shadow-sm"
                         >
-                            Tekrar Dene
+                            Попробовать снова
                         </button>
                     </motion.div>
                 )}
@@ -90,16 +90,16 @@ export default function History() {
                             <Sparkles className="w-10 h-10 text-gray-300" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                            Henüz Hareket Yok
+                            Пока нет истории
                         </h2>
                         <p className="text-gray-500 mb-8 font-medium">
-                            İlk tatil planınızı oluşturduğunuzda burada görünecek.
+                            Когда вы создадите свой первый план отпуска, он появится здесь.
                         </p>
                         <button
                             onClick={() => navigate("/")}
                             className="px-8 py-3.5 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 shadow-lg shadow-orange-500/25 transition-all"
                         >
-                            Plan Oluştur
+                            Создать план
                         </button>
                     </motion.div>
                 )}
@@ -130,7 +130,7 @@ export default function History() {
                                                     </span>
                                                 )) : (
                                                     <span className="px-2 py-0.5 bg-gray-50 text-gray-500 border border-gray-100 rounded-md text-xs font-bold">
-                                                        Belirtilmedi
+                                                        Не указано
                                                     </span>
                                                 )}
                                             </div>
