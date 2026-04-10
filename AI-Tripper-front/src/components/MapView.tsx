@@ -1,8 +1,6 @@
-import { useMemo, useState, useEffect, useRef } from "react";
-import { useTripStore } from "../store/useTripStore";
+import { useState, useEffect, useRef } from "react";
 import { famousPlaces } from "../data/famousPlaces";
 import type { FamousPlace } from "../data/famousPlaces";
-import type { Place } from "../type";
 import FamousPlacePopup from "./FamousPlacePopup";
 import { Sparkles } from "lucide-react";
 import mapboxgl from "mapbox-gl";
@@ -15,44 +13,7 @@ if (!MAPBOX_TOKEN) {
 }
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
-function extractItineraryPlaces(plan: ReturnType<typeof useTripStore.getState>["currentTripPlan"]): Place[] {
-    if (!plan?.daily_itinerary?.length) {
-        return [];
-    }
-
-    const places: Place[] = [];
-    let idCounter = 0;
-
-    for (const day of plan.daily_itinerary) {
-        const pushWithCoords = (item?: {
-            name?: string;
-            address?: string;
-            description?: string;
-            coordinates?: { lat?: number; lng?: number };
-        }) => {
-            const lat = item?.coordinates?.lat;
-            const lng = item?.coordinates?.lng;
-            if (typeof lat !== "number" || typeof lng !== "number") return;
-
-            places.push({
-                id: String(idCounter++),
-                name: item?.name || "Place",
-                lat,
-                lng,
-                address: item?.address || "",
-                description: item?.description || "",
-            });
-        };
-
-        day.activities.forEach((activity) => pushWithCoords(activity));
-    }
-
-    return places;
-}
-
 export default function MapView() {
-    const currentTripPlan = useTripStore((state) => state.currentTripPlan);
-    const places = useMemo(() => extractItineraryPlaces(currentTripPlan), [currentTripPlan]);
     const [selectedFamousPlace, setSelectedFamousPlace] = useState<FamousPlace | null>(null);
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<mapboxgl.Map | null>(null);
@@ -67,14 +28,12 @@ export default function MapView() {
     };
 
     const markersRef = useRef<mapboxgl.Marker[]>([]);
-    const placesRef = useRef<Place[]>(places);
     const famousPlaceRef = useRef(selectedFamousPlace);
 
     // Update refs when values change
     useEffect(() => {
-        placesRef.current = places;
         famousPlaceRef.current = selectedFamousPlace;
-    }, [places, selectedFamousPlace]);
+    }, [selectedFamousPlace]);
 
     // Initialize map once
     useEffect(() => {
@@ -104,11 +63,11 @@ export default function MapView() {
         };
     }, []);
 
-    // Update markers when places or selectedFamousPlace changes
+    // Update markers when selectedFamousPlace changes
     useEffect(() => {
         if (!map.current || !map.current.isStyleLoaded()) return;
         addMarkers();
-    }, [places, selectedFamousPlace]);
+    }, [selectedFamousPlace]);
 
     // Helper function to add markers
     const addMarkers = () => {
@@ -117,53 +76,6 @@ export default function MapView() {
         // Remove old markers
         markersRef.current.forEach(marker => marker.remove());
         markersRef.current = [];
-
-        // Add user's trip places (blue markers)
-        placesRef.current.forEach((place) => {
-            const markerElement = document.createElement('div');
-            markerElement.style.width = '20px';
-            markerElement.style.height = '20px';
-            markerElement.style.background = 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)';
-            markerElement.style.borderRadius = '50%';
-            markerElement.style.border = '2px solid white';
-            markerElement.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-            markerElement.style.cursor = 'pointer';
-            markerElement.style.position = 'relative';
-            markerElement.style.display = 'flex';
-            markerElement.style.alignItems = 'center';
-            markerElement.style.justifyContent = 'center';
-
-            const innerDot = document.createElement('div');
-            innerDot.style.position = 'absolute';
-            innerDot.style.width = '3px';
-            innerDot.style.height = '3px';
-            innerDot.style.backgroundColor = 'white';
-            innerDot.style.borderRadius = '50%';
-            innerDot.style.zIndex = '10';
-            markerElement.appendChild(innerDot);
-
-            // Hover effect - shadow only, no scaling
-            markerElement.addEventListener('mouseenter', () => {
-                markerElement.style.boxShadow = '0 4px 10px rgba(0,0,0,0.4)';
-            });
-            markerElement.addEventListener('mouseleave', () => {
-                markerElement.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-            });
-
-            const popup = new mapboxgl.Popup({ offset: [0, -10] }).setText(place.name);
-            const marker = new mapboxgl.Marker({ element: markerElement })
-                .setLngLat([place.lng, place.lat])
-                .setPopup(popup)
-                .addTo(map.current!);
-
-            // Click handler - open popup
-            markerElement.addEventListener('click', (e) => {
-                e.stopPropagation();
-                marker.getPopup()?.addTo(map.current!);
-            });
-
-            markersRef.current.push(marker);
-        });
 
         // Add famous place marker if selected (red marker)
         if (famousPlaceRef.current) {
@@ -219,13 +131,6 @@ export default function MapView() {
                     duration: 1000
                 });
             }
-        } else if (placesRef.current.length > 0 && map.current) {
-            // If no famous place selected, zoom to fit places
-            const bounds = new mapboxgl.LngLatBounds();
-            placesRef.current.forEach(place => {
-                bounds.extend([place.lng, place.lat]);
-            });
-            map.current.fitBounds(bounds, { padding: 40 });
         }
     };
 

@@ -3,6 +3,7 @@ import json
 import os
 import re
 from typing import Any
+import random
 
 import httpx
 from dotenv import load_dotenv
@@ -150,11 +151,24 @@ async def get_country_context(city: str) -> tuple[str, str]:
         return ("", "")
 
 
+def _get_api_keys() -> list:
+    """Collect all available Gemini API keys (supports key rotation for rate limits)."""
+    keys = []
+    primary = os.getenv("GOOGLE_API_KEY", "").strip()
+    if primary:
+        keys.append(primary)
+    for i in range(2, 6):
+        extra = os.getenv(f"GOOGLE_API_KEY_{i}", "").strip()
+        if extra:
+            keys.append(extra)
+    return keys
+
+
 async def generate_detailed_trip_itinerary(trip_data: dict):
     """Generate a compact day-by-day itinerary as strict JSON using Gemini 2.5 Flash."""
 
-    api_key = os.getenv("GOOGLE_API_KEY")
-    if not api_key:
+    api_keys = _get_api_keys()
+    if not api_keys:
         raise HTTPException(
             status_code=500,
             detail="GOOGLE_API_KEY was not found. Check your .env file.",
@@ -236,10 +250,12 @@ JSON shape:
 }}
 """
 
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.5-flash:generateContent?key={api_key}"
-    )
+    # Retry delays for rate-limit errors (free tier = 5 RPM → need ≥12s between requests)
+    # Attempt 0→1: wait 15s, 1→2: wait 30s, 2→3: wait 60s
+    RATE_LIMIT_DELAYS = [15, 30, 60]
+    MAX_ATTEMPTS = len(RATE_LIMIT_DELAYS) + 1  # 4 total
+
+    timeout = httpx.Timeout(connect=30.0, read=120.0, write=30.0, pool=30.0)
 
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -258,11 +274,20 @@ JSON shape:
         ],
     }
 
-    timeout = httpx.Timeout(connect=30.0, read=120.0, write=30.0, pool=30.0)
-
     response = None
     last_error_detail = None
-    for attempt in range(4):
+    key_index = 0
+
+    for attempt in range(MAX_ATTEMPTS):
+        # Rotate to next API key on each retry (if multiple keys available)
+        current_key = api_keys[key_index % len(api_keys)]
+        key_index += 1
+
+        url = (
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            f"gemini-2.5-flash:generateContent?key={current_key}"
+        )
+
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(url, headers={"Content-Type": "application/json"}, json=payload)
@@ -282,21 +307,25 @@ JSON shape:
         if response.status_code == 200:
             break
 
-        response_text = response.text[:500]
+        response_text = response.text[:600]
         last_error_detail = f"Gemini API error ({response.status_code}): {response_text}"
-        if response.status_code in {429, 503} and attempt < 3:
-            await asyncio.sleep(2 ** attempt)
+        is_rate_limit = response.status_code in {429, 503}
+
+        if is_rate_limit and attempt < MAX_ATTEMPTS - 1:
+            wait_sec = RATE_LIMIT_DELAYS[attempt]
+            key_hint = f" (deneniyor: anahtar {key_index % len(api_keys) + 1}/{len(api_keys)})" if len(api_keys) > 1 else ""
+            print(f"⏳ Rate limit (deneme {attempt + 1}/{MAX_ATTEMPTS}). {wait_sec}s bekleniyor{key_hint}...")
+            await asyncio.sleep(wait_sec)
             continue
 
-        if response.status_code not in {429, 503}:
-            raise HTTPException(
-                status_code=503 if response.status_code in {429, 503} else 500,
-                detail=last_error_detail,
-            )
-
+        # Non-retryable error or exhausted retries
         raise HTTPException(
-            status_code=503 if response.status_code in {429, 503} else 500,
-            detail=last_error_detail,
+            status_code=503 if is_rate_limit else 500,
+            detail=(
+                "Gemini API şu an yoğun. Ücretsiz planda dakikada 5 istek sınırı var. "
+                "Lütfen 1-2 dakika bekleyip tekrar deneyin. "
+                "İkinci bir API anahtarı eklemek için .env dosyasına GOOGLE_API_KEY_2 ekleyebilirsiniz."
+            ) if is_rate_limit else last_error_detail,
         )
 
     if response is None:
