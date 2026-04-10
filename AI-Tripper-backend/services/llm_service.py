@@ -327,4 +327,3 @@ JSON shape:
         itinerary["country_flag"] = country_flag
 
     return itinerary
-
