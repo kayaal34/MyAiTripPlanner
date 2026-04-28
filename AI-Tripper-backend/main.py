@@ -1,11 +1,14 @@
 from typing import Any
 
 from fastapi import FastAPI, Request, Depends, HTTPException
+from fastapi.responses import JSONResponse
+import traceback
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
 import os
+import logging
 
 from services.llm_service import generate_detailed_trip_itinerary
 from database.database import get_db
@@ -13,8 +16,27 @@ from database import models
 from routes import auth, routes, favorites, history, contact, subscription
 from auth.security import get_current_active_user
 
-app = FastAPI(title="AI Tripper API", version="2.0.0")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger("aitripper")
 
+app = FastAPI(title="AI Tripper API", version="2.0.0")
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    # Sunucu logları için hatayı terminale yazdır
+    logger.error(f"🚨 BEKLENMEYEN HATA: {request.method} {request.url} - {str(exc)}", exc_info=True)
+    
+    # Frontend'e her zaman temiz bir JSON dön
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": "Sunucuda beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+            "detail": str(exc)  # Geliştirme aşamasında hatayı görebilmek için
+        }
+    )
 # CORS ayarları
 app.add_middleware(
     CORSMiddleware,
@@ -97,7 +119,7 @@ async def get_city_image(city: str = "istanbul") -> str:
                     image_url = data["results"][0]["urls"]["regular"]
                     return image_url
     except Exception as e:
-        print(f"Unsplash city image error ({city}): {e}")
+        logger.error(f"Unsplash city image error ({city}): {e}")
 
     return fallback
 
@@ -106,7 +128,7 @@ async def get_city_image(city: str = "istanbul") -> str:
 async def log_requests(request: Request, call_next):
     if request.method == "POST":
         body = await request.body()
-        print(f"RECEIVED BODY: {body.decode()}")
+        logger.info(f"RECEIVED BODY: {body.decode()}")
     response = await call_next(request)
     return response
 
@@ -142,7 +164,7 @@ async def get_country_info(country_name: str):
                         "coat_of_arms": country.get("coatOfArms", {}).get("png", "")
                     }
                     
-                    print(f"✅ {info['name']} ülke bilgileri alındı")
+                    logger.info(f"✅ {info['name']} ülke bilgileri alındı")
                     return {"success": True, "country_info": info}
             
             return {"success": False, "error": "Ülke bulunamadı"}

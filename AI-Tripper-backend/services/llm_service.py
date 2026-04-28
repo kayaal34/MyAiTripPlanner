@@ -65,11 +65,24 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 
 async def resolve_country_name_from_city(city: str) -> str:
     """Resolve country dynamically from city using geocoding first, then REST Countries fallback."""
+    from database.database import redis_client
+
     city_clean = city.split(",")[0].strip()
     if not city_clean:
         return ""
 
+    cache_key = f"city_country:{city_clean.lower()}"
+
+    try:
+        if redis_client:
+            cached_country = await redis_client.get(cache_key)
+            if cached_country:
+                return cached_country
+    except Exception as e:
+        print(f"Redis get error: {e}")
+
     timeout = httpx.Timeout(connect=10.0, read=10.0, write=10.0, pool=10.0)
+    country_result = ""
 
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -89,27 +102,35 @@ async def resolve_country_name_from_city(city: str) -> str:
                 if rows:
                     country = rows[0].get("address", {}).get("country", "").strip()
                     if country:
-                        return country
+                        country_result = country
 
             # Secondary: if user typed "City, Country"
-            if "," in city:
+            if not country_result and "," in city:
                 parts = [part.strip() for part in city.split(",") if part.strip()]
                 if len(parts) >= 2:
-                    return parts[-1]
+                    country_result = parts[-1]
 
             # Fallback: REST Countries by capital
-            by_capital = await client.get(
-                f"https://restcountries.com/v3.1/capital/{city_clean}",
-                timeout=8.0,
-            )
-            if by_capital.status_code == 200:
-                rows = by_capital.json()
-                if rows:
-                    return rows[0].get("name", {}).get("common", "").strip()
+            if not country_result:
+                by_capital = await client.get(
+                    f"https://restcountries.com/v3.1/capital/{city_clean}",
+                    timeout=8.0,
+                )
+                if by_capital.status_code == 200:
+                    rows = by_capital.json()
+                    if rows:
+                        country_result = rows[0].get("name", {}).get("common", "").strip()
     except Exception as exc:
         print(f"Country resolve failed for city '{city}': {exc}")
 
-    return ""
+    if country_result:
+        try:
+            if redis_client:
+                await redis_client.set(cache_key, country_result, ex=604800)
+        except Exception as e:
+            print(f"Redis set error: {e}")
+
+    return country_result
 
 
 async def get_country_context(city: str) -> tuple[str, str]:

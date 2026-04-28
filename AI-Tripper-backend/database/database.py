@@ -21,6 +21,9 @@ engine = create_async_engine(
     echo=False,  # SQL loglarını görmek için True yapabilirsin
     future=True,
     pool_pre_ping=True,  # Bağlantı kontrolü
+    pool_size=20,        # Aynı anda açık kalacak sabit bağlantı sayısı
+    max_overflow=10,     # Havuz dolduğunda geçici olarak açılacak ekstra bağlantı sayısı
+    pool_timeout=30,     # Yeni bağlantı beklerken pes etme süresi (saniye)
 )
 
 # Create AsyncSessionLocal class

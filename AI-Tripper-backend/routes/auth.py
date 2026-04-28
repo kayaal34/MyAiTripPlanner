@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from datetime import timedelta
 
 from database import models, schemas
@@ -45,8 +46,12 @@ async def register(user: schemas.UserCreate, db: AsyncSession = Depends(get_db))
         hashed_password=hashed_password
     )
     db.add(db_user)
-    await db.commit()
-    await db.refresh(db_user)
+    try:
+        await db.commit()
+        await db.refresh(db_user)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Имя пользователя или email уже заняты")
     return db_user
 
 
@@ -118,8 +123,12 @@ async def update_user_profile(
     if user_update.age_range is not None:
         current_user.age_range = user_update.age_range
     
-    await db.commit()
-    await db.refresh(current_user)
+    try:
+        await db.commit()
+        await db.refresh(current_user)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Имя пользователя или email уже заняты")
     return current_user
 
 
