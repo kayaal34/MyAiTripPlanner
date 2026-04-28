@@ -10,7 +10,7 @@ const SavedTrips = lazy(() => import("./pages/SavedTrips"));
 const Settings = lazy(() => import("./pages/Settings"));
 const History = lazy(() => import("./pages/History"));
 const Pricing = lazy(() => import("./pages/Pricing"));
-const Destinations = lazy(() => import("./pages/Destinations"));
+
 const TripPlanResult = lazy(() => import("./pages/TripPlanResult"));
 const Success = lazy(() => import("./pages/Success"));
 
@@ -33,7 +33,7 @@ export default function App() {
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/pricing" element={<Pricing />} />
-          <Route path="/destinations" element={<Destinations />} />
+
           <Route path="/trip-plan" element={<TripPlanResult />} />
           <Route path="/saved-trips" element={<SavedTrips />} />
           <Route path="/settings" element={<Settings />} />

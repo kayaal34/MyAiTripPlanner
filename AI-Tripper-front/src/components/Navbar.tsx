@@ -57,7 +57,8 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
         <motion.div
             initial={{ y: -100 }}
             animate={{ y: 0 }}
-            className={`fixed top-0 left-0 w-full flex items-center justify-between px-12 z-50 transition-all duration-300 h-20 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border-b border-gray-200/30 ${transparent
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className={`fixed top-0 left-0 w-full flex items-center justify-between px-12 z-50 transition-colors duration-300 h-20 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border-b border-gray-200/30 ${transparent
                 ? "bg-gray-100/20 backdrop-blur-md"
                 : "bg-gray-200/40 backdrop-blur-xl"
                 }`}
@@ -84,12 +85,7 @@ export default function Navbar({ onAuthClick, transparent = false }: NavbarProps
                     Главная страница
                 </button>
 
-                <button
-                    onClick={() => navigate("/destinations")}
-                    className="text-gray-900 hover:text-blue-600 font-bold transition-colors text-[15px]"
-                >
-                    Города отдыха
-                </button>
+
 
                 <button
                     onClick={() => navigate("/pricing")}

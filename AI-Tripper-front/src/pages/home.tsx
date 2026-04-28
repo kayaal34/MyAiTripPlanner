@@ -1,9 +1,9 @@
 import RouteForm from "../components/RouteForm";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import FAQ from "../components/FAQ";
 import AuthModal from "../components/AuthModal";
-import MapView from "../components/MapView";
+const MapView = lazy(() => import("../components/MapView"));
 import { getCurrentUser } from "../services/api";
 import { useAuthStore } from "../store/useAuthStore";
 import { motion } from "framer-motion";
@@ -79,6 +79,7 @@ export default function Home() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
                         className="w-full mb-12 mt-10 md:mt-0"
+                        style={{ willChange: 'transform' }}
                     >
                         <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 italic leading-tight drop-shadow-lg">
                             Идеальный побег
@@ -94,6 +95,7 @@ export default function Home() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3, duration: 0.8 }}
                         className="w-full"
+                        style={{ willChange: 'transform' }}
                     >
                         <div>
                             <RouteForm onRequireAuth={() => setShowAuthModal(true)} />
@@ -268,12 +270,21 @@ export default function Home() {
                             Нажмите на кнопку, чтобы увидеть случайное туристическое место
                         </p>
                     </div>
-                    <MapView />
+                    <Suspense fallback={
+                        <div className="h-[520px] w-full rounded-3xl bg-gray-100 flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="h-10 w-10 rounded-full border-4 border-gray-200 border-t-orange-500 animate-spin" />
+                                <p className="text-sm font-medium text-gray-500">Карта загружается...</p>
+                            </div>
+                        </div>
+                    }>
+                        <MapView />
+                    </Suspense>
                 </div>
             </div>
 
-            {/* TESTIMONIALS SECTION */}
-            <div className="py-24 bg-white">
+            {/* TESTIMONIALS SECTION — INFINITE MARQUEE */}
+            <div className="py-24 bg-white overflow-hidden">
                 <div className="max-w-6xl mx-auto px-6">
                     <div className="text-center mb-16">
                         <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
@@ -283,37 +294,81 @@ export default function Home() {
                             Не верьте нам на слово. Посмотрите, что говорят наши пользователи о своих путешествиях.
                         </p>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                        {[
-                            { name: "Sarah Jenkins", role: "Одиночный путешественник", text: "GlobeTrip сделал планирование моего тура по Европе совершенно беззаботным. Визуальная планировка карты всё меняет!" },
-                            { name: "David & Emma", role: "Молодожены", text: "Мы спланировали всю нашу поездку на Бали здесь. Наличие всех наших ежедневных мероприятий в одном месте сэкономило нам кучу времени." },
-                            { name: "Michael Chen", role: "Искатель приключений", text: "Наконец-то приложение, которое визуально упорядочивает мои хаотичные идеи для путешествий. Функция перетаскивания невероятно удобна." }
-                        ].map((testi, i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.2 }}
-                                className="bg-white p-8 rounded-3xl rounded-tl-[60px] shadow-[0_10px_40px_rgba(0,0,0,0.05)] border border-gray-100 relative mt-8"
-                            >
-                                <div className="absolute -top-8 right-8 w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg border-4 border-white text-white text-2xl font-bold">
-                                    {testi.name.charAt(0)}
-                                </div>
-                                <div className="text-orange-400 mb-6 text-xl">
-                                    <i className="fas fa-quote-left"></i>
-                                </div>
-                                <p className="text-gray-600 mb-6 italic leading-relaxed">
-                                    "{testi.text}"
-                                </p>
-                                <div>
-                                    <h4 className="font-bold text-gray-900">{testi.name}</h4>
-                                    <p className="text-sm text-orange-500 font-medium">{testi.role}</p>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
                 </div>
+
+                {(() => {
+                    const testimonials = [
+                        { name: "Sarah Jenkins", role: "Одиночный путешественник", text: "GlobeTrip сделал планирование моего тура по Европе совершенно беззаботным. Визуальная планировка карты всё меняет!" },
+                        { name: "David & Emma", role: "Молодожены", text: "Мы спланировали всю нашу поездку на Бали здесь. Наличие всех наших ежедневных мероприятий в одном месте сэкономило нам кучу времени." },
+                        { name: "Michael Chen", role: "Искатель приключений", text: "Наконец-то приложение, которое визуально упорядочивает мои хаотичные идеи для путешествий. Функция перетаскивания невероятно удобна." },
+                        { name: "Anna Petrova", role: "Семейный отдых", text: "Идеальный маршрут за пару кликов! Спланировали поездку в Стамбул для всей семьи — дети были в восторге." },
+                        { name: "James Wilson", role: "Бизнес-путешественник", text: "Экономит кучу времени. Теперь я планирую все командировки здесь — удобно и быстро." },
+                        { name: "Елена Смирнова", role: "Блогер-путешественник", text: "Раньше я часами сидела над маршрутами. Теперь AI делает это за меня, а я наслаждаюсь путешествием!" },
+                        { name: "Kenji Tanaka", role: "Фотограф", text: "Сервис подсказал мне локации, о которых я даже не слышал. Мои фотографии стали намного разнообразнее!" },
+                        { name: "Maria Garcia", role: "Студентка", text: "Бюджетный маршрут по Европе за 10 дней — и всё спланировано идеально. Лучшее приложение для студентов!" },
+                        { name: "Олег Козлов", role: "Пенсионер-путешественник", text: "Простой и понятный интерфейс. Даже я разобрался за 5 минут и спланировал поездку в Грузию." },
+                        { name: "Sophie Laurent", role: "Гурман-путешественник", text: "Маршрут учёл все мои гастрономические предпочтения. В каждом городе — лучшие рестораны и кафе!" },
+                    ];
+
+                    const renderCard = (testi: typeof testimonials[0], i: number) => (
+                        <div
+                            key={`${testi.name}-${i}`}
+                            className="bg-white p-8 rounded-3xl rounded-tl-[60px] shadow-[0_10px_40px_rgba(0,0,0,0.05)] border border-gray-100 relative mt-8 w-[380px] flex-shrink-0"
+                        >
+                            <div className="absolute -top-8 right-8 w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg border-4 border-white text-white text-2xl font-bold">
+                                {testi.name.charAt(0)}
+                            </div>
+                            <div className="text-orange-400 mb-6 text-xl">
+                                <i className="fas fa-quote-left"></i>
+                            </div>
+                            <p className="text-gray-600 mb-6 italic leading-relaxed">
+                                "{testi.text}"
+                            </p>
+                            <div>
+                                <h4 className="font-bold text-gray-900">{testi.name}</h4>
+                                <p className="text-sm text-orange-500 font-medium">{testi.role}</p>
+                            </div>
+                        </div>
+                    );
+
+                    return (
+                        <div
+                            className="relative group"
+                            style={{
+                                maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+                                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+                            }}
+                        >
+                            <motion.div
+                                className="flex gap-8 flex-nowrap py-4"
+                                animate={{ x: ['0%', '-50%'] }}
+                                transition={{
+                                    x: {
+                                        repeat: Infinity,
+                                        repeatType: 'loop',
+                                        duration: 40,
+                                        ease: 'linear',
+                                    },
+                                }}
+                                style={{ willChange: 'transform' }}
+                                whileHover={{ animationPlayState: 'paused' }}
+                                onMouseEnter={(e) => {
+                                    const el = e.currentTarget as HTMLElement;
+                                    el.style.animationPlayState = 'paused';
+                                }}
+                                onMouseLeave={(e) => {
+                                    const el = e.currentTarget as HTMLElement;
+                                    el.style.animationPlayState = 'running';
+                                }}
+                            >
+                                {/* Original set */}
+                                {testimonials.map((t, i) => renderCard(t, i))}
+                                {/* Duplicate for seamless loop */}
+                                {testimonials.map((t, i) => renderCard(t, i + testimonials.length))}
+                            </motion.div>
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* CTA SECTION - ORANGE THEME */}

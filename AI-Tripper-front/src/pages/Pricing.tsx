@@ -185,116 +185,166 @@ const Pricing = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] font-sans">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/30 to-amber-50/40 font-sans">
             <Navbar />
             <div className="py-12 px-4 pt-32">
-                <div className="max-w-7xl mx-auto">
+                <div className="max-w-5xl mx-auto">
                     {/* Header */}
                     <div className="text-center mb-16">
                         <h1 className="text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">
-                            Прокачайте свои <span className="text-orange-500 underline decoration-orange-300 decoration-4 underline-offset-8">Планы путешествий</span>
+                            Seyahat Planlarınızı{' '}
+                            <span className="text-[#EA580C] underline decoration-orange-300 decoration-4 underline-offset-8">
+                                Yükseltin
+                            </span>
                         </h1>
-                        <p className="text-xl text-gray-500 font-medium">
-                            Создайте отпуск своей мечты с mytripplanner
+                        <p className="text-xl text-gray-500 font-medium max-w-xl mx-auto">
+                            Size en uygun planı seçin ve hayalinizdeki tatili oluşturun
                         </p>
                         {currentPlan !== 'free' && (
                             <div className="mt-6">
-                                <span className="inline-block bg-orange-100/50 border border-orange-200 text-orange-700 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm">
-                                    Текущий план: {currentPlan.toUpperCase()}
+                                <span className="inline-flex items-center gap-2 bg-orange-50 border border-orange-200 text-orange-700 px-5 py-2.5 rounded-full text-sm font-bold shadow-sm">
+                                    <Check className="w-4 h-4" />
+                                    Mevcut Plan: {currentPlan.toUpperCase()}
                                 </span>
                             </div>
                         )}
                     </div>
 
-                    {/* Pricing Cards */}
-                    <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-                        {plans.map((plan) => {
-                            const isCurrentPlan = currentPlan === plan.id;
-                            const isPopular = plan.id === 'premium';
+                    {/* ===== TWO-CARD PRICING GRID ===== */}
+                    <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
 
-                            return (
-                                <div
-                                    key={plan.id}
-                                    className={`relative bg-white rounded-3xl p-8 transition-all duration-300 ${isPopular ? 'border-2 border-orange-500 shadow-xl shadow-orange-500/10 scale-105 z-10' : 'border border-gray-200 shadow-sm hover:shadow-lg hover:border-orange-200'
-                                        } ${isCurrentPlan ? 'ring-4 ring-green-500/30 border-green-500' : ''}`}
-                                >
-                                    {/* Popular Badge */}
-                                    {isPopular && (
-                                        <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 z-20">
-                                            <span className="bg-orange-500 text-white px-5 py-2 rounded-xl text-sm font-extrabold shadow-lg shadow-orange-500/30 border-2 border-white uppercase tracking-widest flex items-center justify-center gap-2 whitespace-nowrap">
-                                                ⭐ САМЫЙ ПОПУЛЯРНЫЙ
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    {/* Current Plan Badge */}
-                                    {isCurrentPlan && (
-                                        <div className="absolute top-4 right-4 z-20">
-                                            <span className="bg-green-500 border-2 border-white text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center shadow-md">
-                                                <Check className="w-3.5 h-3.5 mr-1" />
-                                                Активен
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    {/* Plan Header */}
-                                    <div className="text-center mb-8 bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                                        <div className="flex justify-center mb-4">
-                                            {getPlanIcon(plan.id) || <div className="w-8 h-8 rounded-full bg-gray-200"></div>}
-                                        </div>
-                                        <h3 className="text-2xl font-extrabold text-gray-900 mb-2 uppercase tracking-wide">{plan.name}</h3>
-                                        <div className="flex items-baseline justify-center">
-                                            <span className="text-5xl font-extrabold text-gray-900">
-                                                ${plan.price}
-                                            </span>
-                                            {plan.price > 0 && (
-                                                <span className="text-gray-500 ml-2 font-bold uppercase tracking-wider text-sm">/мес</span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Features */}
-                                    <ul className="space-y-4 mb-10 px-2 flex-grow">
-                                        {plan.features.map((feature, index) => (
-                                            <li key={index} className="flex items-start">
-                                                <div className="mt-0.5 w-6 h-6 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0 mr-3 border border-orange-100">
-                                                    <Check className="w-4 h-4 text-orange-500" />
-                                                </div>
-                                                <span className="text-gray-700 font-medium leading-relaxed">{feature}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-
-                                    {/* CTA Button */}
-                                    <button
-                                        onClick={() => handleSubscribe(plan.id)}
-                                        disabled={isCurrentPlan || checkoutLoading === plan.id}
-                                        className={`w-full py-4 px-6 rounded-xl font-extrabold text-lg transition-all duration-300 mt-auto ${isCurrentPlan
-                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border outline-none'
-                                            : isPopular
-                                                ? 'bg-orange-500 text-white hover:bg-orange-600 shadow-lg shadow-orange-500/30 border border-orange-500 hover:border-orange-600'
-                                                : 'bg-white text-gray-900 border-2 border-gray-200 hover:border-gray-900 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        {checkoutLoading === plan.id ? (
-                                            <span className="flex items-center justify-center">
-                                                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                                                Ожидание...
-                                            </span>
-                                        ) : isCurrentPlan ? (
-                                            'Текущий план'
-                                        ) : plan.price === 0 ? (
-                                            'Начать бесплатно'
-                                        ) : (
-                                            'Получить Premium'
-                                        )}
-                                    </button>
+                        {/* ---- BASIC PLAN (Sol Kart) ---- */}
+                        <div className="relative bg-white rounded-3xl p-8 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col">
+                            {/* Free plan aktif göstergesi */}
+                            {currentPlan === 'free' && (
+                                <div className="absolute top-4 right-4 z-20">
+                                    <span className="bg-gray-100 border border-gray-300 text-gray-500 px-3 py-1.5 rounded-full text-xs font-bold flex items-center shadow-sm">
+                                        <Check className="w-3.5 h-3.5 mr-1" />
+                                        Aktif
+                                    </span>
                                 </div>
-                            );
-                        })}
+                            )}
+
+                            {/* Plan Header */}
+                            <div className="text-center mb-8">
+                                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-2xl font-extrabold text-gray-900 mb-1">Basic Plan</h3>
+                                <p className="text-sm text-gray-400 font-medium mb-4">Başlamak için ideal</p>
+                                <div className="flex items-baseline justify-center">
+                                    <span className="text-5xl font-extrabold text-gray-900">Ücretsiz</span>
+                                </div>
+                            </div>
+
+                            {/* Divider */}
+                            <div className="h-px bg-gray-100 mb-8"></div>
+
+                            {/* Features */}
+                            <ul className="space-y-4 mb-10 flex-grow">
+                                {[
+                                    'Ayda 3 Rota',
+                                    'Standart AI Planlaması',
+                                    'E-posta Desteği',
+                                ].map((feature, idx) => (
+                                    <li key={idx} className="flex items-center">
+                                        <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mr-3">
+                                            <Check className="w-4 h-4 text-gray-400" />
+                                        </div>
+                                        <span className="text-gray-600 font-medium">{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {/* CTA — her zaman disabled */}
+                            <button
+                                disabled
+                                className="w-full py-4 px-6 rounded-xl font-extrabold text-base bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 transition-all duration-300"
+                            >
+                                Mevcut Planınız
+                            </button>
+                        </div>
+
+                        {/* ---- PREMIUM PLAN (Sağ Kart – vurgulu) ---- */}
+                        <div className="relative bg-white rounded-3xl p-8 border-2 border-[#EA580C] shadow-lg shadow-orange-500/10 hover:shadow-xl hover:shadow-orange-500/15 transition-all duration-300 flex flex-col">
+                            {/* "En Popüler" Badge */}
+                            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
+                                <span className="bg-[#EA580C] text-white px-5 py-1.5 rounded-full text-xs font-extrabold shadow-lg shadow-orange-500/30 uppercase tracking-widest flex items-center gap-1.5 whitespace-nowrap">
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    En Popüler
+                                </span>
+                            </div>
+
+                            {/* Premium plan aktif göstergesi */}
+                            {currentPlan === 'premium' && (
+                                <div className="absolute top-4 right-4 z-20">
+                                    <span className="bg-[#EA580C] border-2 border-white text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center shadow-md">
+                                        <Check className="w-3.5 h-3.5 mr-1" />
+                                        Aktif
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Plan Header */}
+                            <div className="text-center mb-8">
+                                <div className="w-14 h-14 rounded-2xl bg-[#EA580C] flex items-center justify-center mx-auto mb-5 shadow-lg shadow-orange-500/25">
+                                    <Crown className="w-7 h-7 text-white" />
+                                </div>
+                                <h3 className="text-2xl font-extrabold text-gray-900 mb-1">Premium Plan</h3>
+                                <p className="text-sm text-gray-400 font-medium mb-4">Sınırsız deneyim</p>
+                                <div className="flex items-baseline justify-center">
+                                    <span className="text-5xl font-extrabold text-gray-900">$9.99</span>
+                                    <span className="text-gray-400 ml-2 font-bold text-base">/Ay</span>
+                                </div>
+                            </div>
+
+                            {/* Divider */}
+                            <div className="h-px bg-orange-100 mb-8"></div>
+
+                            {/* Features */}
+                            <ul className="space-y-4 mb-10 flex-grow">
+                                {[
+                                    'Sınırsız Rota',
+                                    'Gemini 1.5 Pro ile Gelişmiş Detaylar',
+                                    'PDF Çıktısı Alma',
+                                    'Öncelikli Destek',
+                                ].map((feature, idx) => (
+                                    <li key={idx} className="flex items-center">
+                                        <div className="w-6 h-6 rounded-full bg-orange-50 flex items-center justify-center flex-shrink-0 mr-3 border border-orange-100">
+                                            <Check className="w-4 h-4 text-[#EA580C]" />
+                                        </div>
+                                        <span className="text-gray-700 font-medium">{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {/* CTA — aktif yükseltme butonu */}
+                            <button
+                                onClick={() => handleSubscribe('premium')}
+                                disabled={currentPlan === 'premium' || checkoutLoading === 'premium'}
+                                className={`w-full py-4 px-6 rounded-xl font-extrabold text-base transition-all duration-300 ${
+                                    currentPlan === 'premium'
+                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                        : 'bg-[#EA580C] text-white hover:bg-[#c34e0a] shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 active:scale-[0.98]'
+                                }`}
+                            >
+                                {checkoutLoading === 'premium' ? (
+                                    <span className="flex items-center justify-center">
+                                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                                        Bekleniyor...
+                                    </span>
+                                ) : currentPlan === 'premium' ? (
+                                    'Mevcut Planınız'
+                                ) : (
+                                    'Şimdi Yükselt'
+                                )}
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Cancel Subscription Button */}
+                    {/* Abonelik İptal Butonu */}
                     {currentPlan !== 'free' && (
                         <div className="text-center mt-12 bg-white rounded-2xl border border-gray-200 p-6 max-w-sm mx-auto shadow-sm">
                             <button
@@ -304,25 +354,28 @@ const Pricing = () => {
                             >
                                 {loading ? (
                                     <>
-                                        <Loader2 className="w-4 h-4 animate-spin" /> Обработка...
+                                        <Loader2 className="w-4 h-4 animate-spin" /> İşleniyor...
                                     </>
                                 ) : (
-                                    'Отменить подписку'
+                                    'Aboneliği İptal Et'
                                 )}
                             </button>
-                            <p className="text-xs text-gray-400 mt-2">Вы можете отменить подписку в любой момент.</p>
+                            <p className="text-xs text-gray-400 mt-2">Aboneliğinizi istediğiniz zaman iptal edebilirsiniz.</p>
                         </div>
                     )}
 
-                    {/* FAQ or Info Section */}
+                    {/* Footer Bilgi */}
                     <div className="mt-16 text-center">
-                        <div className="inline-flex flex-col md:flex-row items-center gap-6 bg-white border border-gray-200 rounded-2xl px-8 py-5 shadow-sm">
+                        <div className="inline-flex flex-col md:flex-row items-center gap-6 bg-white/80 backdrop-blur border border-gray-200 rounded-2xl px-8 py-5 shadow-sm">
                             <p className="text-sm font-bold text-gray-600 flex items-center gap-2">
-                                <span className="text-xl">💳</span> Платежи по кредитным картам безопасно защищены.
+                                <span className="text-xl">💳</span> Kredi kartı ödemeleri güvenle korunmaktadır.
                             </p>
                             <div className="hidden md:block w-px h-6 bg-gray-200"></div>
                             <p className="text-sm font-bold text-gray-600 flex items-center gap-2">
-                                <span className="text-xl">❓</span> Служба поддержки: <a href="mailto:support@aitripper.com" className="text-orange-500 hover:text-orange-600">support@aitripper.com</a>
+                                <span className="text-xl">❓</span> Destek:{' '}
+                                <a href="mailto:support@aitripper.com" className="text-[#EA580C] hover:text-orange-700 underline underline-offset-2">
+                                    support@aitripper.com
+                                </a>
                             </p>
                         </div>
                     </div>
